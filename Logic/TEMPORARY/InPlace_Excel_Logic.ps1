@@ -3,7 +3,7 @@ Import-Module SQLSERVER
 Import-Module F5-LTM
 
 <# COPYING EXCEL TEMPLATE #>
-Get-ChildItem -Path "F:\Build Templates\InPlace" -Filter "InPlace*" | Copy-Item -Destination "C:\Users\$($aAdmin)\Desktop"
+Get-ChildItem -Path "F:\StufferDocs\Build Templates" -Filter "InPlace*" | Copy-Item -Destination "C:\Users\$($aAdmin)\Desktop"
 $excelFilePath = Get-ChildItem -Path "C:\Users\$($aAdmin)\Desktop\" -Filter "InPlace*" | ForEach-Object {$_.FullName}
 
 <# EXCEL OBJECT #>
@@ -36,9 +36,9 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
     if ($environmentsMaster[$x][0] -eq "Production") { 
         Write-Host ":::::::: $($environmentsMaster[$x][0]) Environment ::::::::" -Foregroundcolor Yellow
         
+        $webServerCount = 0
         for ($y=1; $y -lt $environmentsMaster[$x].Length; $y++) {     
             
-            $webServerCount = 0
             if ($environmentsMaster[$x][$y][0].Name.Substring(($environmentsMaster[$x][$y][0].Name.Length - 5), 3) -eq "app") {
             
                 ##########################
@@ -133,8 +133,6 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     } else {
 
                         Write-Host "Number of integrations found: $($integrations.PSChildName.Count)"
-
-                        $integrations | get-member
                         
                     <#     foreach ($x in $integrations.PSChildName) {
                            if ($x -like "*ProjectPlace*") {
@@ -271,21 +269,6 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\WebServerPlatform"
                 }
                 Write-Host $crVersion.CrVersion
-
-                <# CUSTOM LOGOS #>
-                Write-Host "Custom Logos" -ForegroundColor Red
-                $logoFiles = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0].Name)" -Credential $credentials -ScriptBlock {
-                    Get-ChildItem -Path "F:\Planview\MidTier\WebServer\images\logos"
-                }
-                if ($logoFiles.Length -notlike 6) {
-
-                    Write-host "Custom logos: FOUND"
-
-                } else {
-
-                    Write-host "Custom logos: NOT FOUND"
-                
-                }
 
                 <# MAJOR VERSION #>
                 Write-Host "Major Version" -ForegroundColor Red
@@ -762,21 +745,6 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 }
                 Write-Host $crVersion.CrVersion
 
-                <# CUSTOM LOGOS #>
-                Write-Host "Custom Logos" -ForegroundColor Red
-                $logoFiles = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0].Name)" -Credential $credentials -ScriptBlock {
-                    Get-ChildItem -Path "F:\Planview\MidTier\WebServer\images\logos"
-                }
-                if ($logoFiles.Length -notlike 6) {
-
-                    Write-host "Custom logos: FOUND"
-
-                } else {
-
-                    Write-host "Custom logos: NOT FOUND"
-                
-                }
-
                 <# MAJOR VERSION #>
                 Write-Host "Major Version" -ForegroundColor Red
                 $majorVersion = $crVersion.CrVersion.Split('.')[0]
@@ -947,8 +915,6 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                 Write-Host "`n" -ForegroundColor Red  
             }
-            
-        
 
         }
 
@@ -957,9 +923,9 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
     if ($environmentsMaster[$x][0] -eq "Sandbox") { 
         Write-Host ":::::::: $($environmentsMaster[$x][0]) Environment ::::::::" -Foregroundcolor Yellow
         
+        $webServerCount = 0
         for ($y=1; $y -lt $environmentsMaster[$x].Length; $y++) {        
 
-            $webServerCount = 0         
             if ($environmentsMaster[$x][$y][0].Name.Substring(($environmentsMaster[$x][$y][0].Name.Length - 5), 3) -eq "app") {
         
                 #######################
@@ -1188,21 +1154,6 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\WebServerPlatform"
                 }
                 Write-Host $crVersion.CrVersion
-
-                <# CUSTOM LOGOS #>
-                Write-Host "Custom Logos" -ForegroundColor Red
-                $logoFiles = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0].Name)" -Credential $credentials -ScriptBlock {
-                    Get-ChildItem -Path "F:\Planview\MidTier\WebServer\images\logos"
-                }
-                if ($logoFiles.Length -notlike 6) {
-
-                    Write-host "Custom logos: FOUND"
-
-                } else {
-
-                    Write-host "Custom logos: NOT FOUND"
-                
-                }
         
                 <# MAJOR VERSION #>
                 Write-Host "Major Version" -ForegroundColor Red
@@ -1587,7 +1538,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 $buildData.Cells.Item(28,2)= $database_custom_models.Count
                 $modelCount = 0;
                 foreach ($model in $database_custom_models.olap_obj_name){
-                    $buildData.Cells.Item(91, (2 + $modelCount))= $model
+                    $buildData.Cells.Item(92, (2 + $modelCount))= $model
                     $modelCount++
                 }
         
@@ -1663,21 +1614,6 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\WebServerPlatform"
                 }
                 Write-Host $crVersion.CrVersion
-
-                <# CUSTOM LOGOS #>
-                Write-Host "Custom Logos" -ForegroundColor Red
-                $logoFiles = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0].Name)" -Credential $credentials -ScriptBlock {
-                    Get-ChildItem -Path "F:\Planview\MidTier\WebServer\images\logos"
-                }
-                if ($logoFiles.Length -notlike 6) {
-
-                    Write-host "Custom logos: FOUND"
-
-                } else {
-
-                    Write-host "Custom logos: NOT FOUND"
-                
-                }
         
                 <# MAJOR VERSION #>
                 Write-Host "Major Version" -ForegroundColor Red

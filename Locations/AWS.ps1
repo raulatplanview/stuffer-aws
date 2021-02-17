@@ -1,9 +1,11 @@
 #Import-Module \\scripthost\modules\pvadmin
 #Import-Module SQLSERVER
 
+$admin = "rreyes"
+
 <# SETTING CREDENTIALS #>
 Write-Host "Sign-in with your 'planviewcloud\aws-<admin>' account:" -ForegroundColor Magenta
-$aAdmin = "a-$($admin)"
+$aAdmin =  "a-$($admin)"
 $awsAdmin = "aws-$($admin)"
 $credentials = Get-Credential -Credential "planviewcloud\$($awsAdmin)"
 $awsCredentials = "AWSEC2ReadCreds"
@@ -25,7 +27,7 @@ switch($option) {
 }
 
 <# FIND CUSTOMER RELATED VMs #>
-Write-Host "Connecting to AWS and finding instances corralated with customer code ""$($customerCode.ToUpper())""" -ForegroundColor DarkGreen
+Write-Host "`nConnecting to AWS and finding instances corralated with customer code ""$($customerCode.ToUpper())""" -ForegroundColor DarkGreen
 $resourceIds = Get-EC2Tag -Region $awsRegion -Filter @{Name="tag:Cust_Id";Value="$($customerCode.ToUpper())"},@{Name="resource-type";Value="instance"} -ProfileName $awsCredentials
 Write-Host "EC2 Instances found associated with customer code '$($customerCode.ToUpper())': $($resourceIds.Count)" -ForegroundColor Yellow
 
@@ -38,7 +40,7 @@ foreach ($id in $resourceIds) {
     }
 }
 Write-Host "EC2 Instances actively running: $($activeResourceIds.Length)" -ForegroundColor Yellow
-Write-Host "Starting production and sandbox environment data collection..." -ForegroundColor Red
+Write-Host "`nConnecting to actively running instances..." -ForegroundColor Red
 
 
 
@@ -52,7 +54,7 @@ foreach ($id in $activeResourceIds){
         $_.Key -eq "Major" -or $_.Key -eq "CrVersion" -or $_.Key -eq "Maint_Window" -or $_.Key -eq "Cust_Url" -or $_.Key -eq "Tz_Id"} |
         Select-Object Key, Value
     $serverName = $productMetadata | Where-Object Key -eq "Name" | Select-Object Value
-    Write-Host "Connected to $($serverName.Value)..." -ForegroundColor Green
+    Write-Host "`nConnected to $($serverName.Value)..." -ForegroundColor Green
 
     # INSTANCE METADATA (JSON): INSTANCE ID, INSTANCE TYPE, AVAILABILITY ZONE, LOCAL IP ADDRESS (IPV4), INSTANCE STATE. #
     $instanceMetadata = @()
@@ -99,7 +101,6 @@ foreach ($id in $activeResourceIds){
     # POPULATE SERVER ARRAY #
     $servers += (,($productMetadata, $instanceMetadata, $hardwareMetadata, $tasks))
 
-    Write-Host "================================================================================" -ForegroundColor Gray 
 }
 
 <# SORT MASTER SERVER ARRAY #>
@@ -110,12 +111,16 @@ $undeclaredServers = @()
 foreach ($server in $servers) {
 
     $environmentURL = ($server[0] | Where-Object Key -eq "Cust_Url" | Select-Object Value).Value
+    $urlPrefix =  $environmentURL.split('.')[0]
+
     $serverName = ($server[0] | Where-Object Key -eq "Name" | Select-Object Value).Value
+
+    
 
     if ($null -eq $environmentURL) {
         $undeclaredServers += (,($server))
     }
-    if ($environmentURL -like "*$($sandboxURLsuffix).*") {
+    if ($urlPrefix.substring(($urlPrefix.length-3)) -eq "-sb") {
         $serverNames += (,($serverName))
         $sandboxComputers += (,($server))
     }
@@ -129,3 +134,11 @@ foreach ($server in $servers) {
 Write-Host "Total number of active Production servers identified: $($productionComputers.Count)" -ForegroundColor yellow
 Write-Host "Total number of active Sandbox servers identified: $($sandboxComputers.Count)" -ForegroundColor yellow
 Write-Host "Total number of active non-Production or non-Sandbox servers identified: $($undeclaredServers.Count)" -ForegroundColor yellow
+
+<# TO 'Logic' #>
+if ($type -eq 1){
+    . "$($stufferDirectory)\Logic\TEMPORARY\InPlace_Excel_Logic.ps1"
+}
+if ($type -eq 2){
+    . "$($stufferDirectory)\Logic\TEMPORARY\NewLogo_Upgrade_Excel_Logic.ps1"
+}
