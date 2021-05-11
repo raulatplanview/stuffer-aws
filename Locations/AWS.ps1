@@ -1,13 +1,9 @@
-#Import-Module \\scripthost\modules\pvadmin
-#Import-Module SQLSERVER
-
-$admin = "rreyes"
-
 <# SETTING CREDENTIALS #>
 Write-Host "Sign-in with your 'planviewcloud\aws-<admin>' account:" -ForegroundColor Magenta
 $aAdmin =  "a-$($admin)"
 $awsAdmin = "aws-$($admin)"
 $credentials = Get-Credential -Credential "planviewcloud\$($awsAdmin)"
+$f5Credentials = New-Object System.Management.Automation.PSCredential ($aAdmin, $credentials.Password)
 $awsCredentials = "AWSEC2ReadCreds"
 
 <# SETTING REGIONAL OPTIONS #>
@@ -15,14 +11,16 @@ switch($option) {
     1 {$jumpbox = "Jumpbox01fr.frankfurt.planviewcloud.net"; 
         $ad_server = "WIN-SDUR6J6Q8TH.frankfurt.planviewcloud.net"; 
         $dataCenterLocation = "fr"; 
-        $awsRegion = "eu-central-1" 
-        $reportFarm = "https://pbirsfarm01fr.pvcloud.com/reportserver"
+        $awsRegion = "eu-central-1";
+        $reportFarm = "https://pbirsfarm01fr.pvcloud.com/reportserver";
+        $f5ip = "10.132.81.2";
         break}
     2 {$jumpbox = "Jumpbox01.sydney.planviewcloud.net"; 
         $ad_server = "WIN-O669CEBVH8N.sydney.planviewcloud.net"; 
         $dataCenterLocation = "au";
-        $awsRegion = "ap-southeast-2" 
-        $reportFarm = "https://pbirsfarm03au.pvcloud.com/reportserver"
+        $awsRegion = "ap-southeast-2";
+        $reportFarm = "https://pbirsfarm03au.pvcloud.com/reportserver";
+        $f5ip = "10.132.81.2";
         break}
 }
 
@@ -48,6 +46,7 @@ Write-Host "`nConnecting to actively running instances..." -ForegroundColor Red
 $servers = @()
 foreach ($id in $activeResourceIds){
 
+
     # PRODUCT METADATA: SERVER NAME, SERVER TYPE, CUSTOMER CODE, CUSTOMER NAME, CURRENT E1 VERSION, MAJOR VERSION, CUSTOMER URL, TIME ZONE, MAINTENANCE DAY # 
     $productMetadata = Get-EC2Tag -Region $awsRegion -Filter @{Name="resource-id";Value="$($id.ResourceID)"} -ProfileName $awsCredentials | 
         Where-Object {$_.Key -eq "Name" -or $_.Key -eq "Cust_Id" -or $_.Key -eq "Sub_Tier" -or $_.Key -eq "Cust_Name" -or 
@@ -55,6 +54,7 @@ foreach ($id in $activeResourceIds){
         Select-Object Key, Value
     $serverName = $productMetadata | Where-Object Key -eq "Name" | Select-Object Value
     Write-Host "`nConnected to $($serverName.Value)..." -ForegroundColor Green
+
 
     # INSTANCE METADATA (JSON): INSTANCE ID, INSTANCE TYPE, AVAILABILITY ZONE, LOCAL IP ADDRESS (IPV4), INSTANCE STATE. #
     $instanceMetadata = @()
@@ -92,12 +92,14 @@ foreach ($id in $activeResourceIds){
 
     $hardwareMetadata = ($hdinfo, $raminfo, $cpuInfo)
     
+
     # SCHEDULED TASKS: TASKS
     Write-Host "Gathering scheduled task information..." -ForegroundColor Cyan
     $tasks = Invoke-Command -computer $serverName.Value -ScriptBlock {
         Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
     } -Credential $credentials
 
+    
     # POPULATE SERVER ARRAY #
     $servers += (,($productMetadata, $instanceMetadata, $hardwareMetadata, $tasks))
 
@@ -105,8 +107,8 @@ foreach ($id in $activeResourceIds){
 
 <# SORT MASTER SERVER ARRAY #>
 $serverNames = @()
-$productionComputers = @()
-$sandboxComputers = @()
+$productionComputers = @("Production")
+$sandboxComputers = @("Sandbox")
 $undeclaredServers = @()
 foreach ($server in $servers) {
 
@@ -131,13 +133,31 @@ foreach ($server in $servers) {
     
 }
 
-Write-Host "Total number of active Production servers identified: $($productionComputers.Count)" -ForegroundColor yellow
-Write-Host "Total number of active Sandbox servers identified: $($sandboxComputers.Count)" -ForegroundColor yellow
+Write-Host "Total number of active Production servers identified: $($productionComputers.Count - 1)" -ForegroundColor yellow
+Write-Host "Total number of active Sandbox servers identified: $($sandboxComputers.Count - 1)" -ForegroundColor yellow
 Write-Host "Total number of active non-Production or non-Sandbox servers identified: $($undeclaredServers.Count)" -ForegroundColor yellow
+$productionComputers
+<# CREATE MASTER ENVIRONMENT ARRAY #>
+$environmentsMaster = @($productionComputers, $sandboxComputers)
+
+<# TEST ENVIRONMENT ARRAY #>
+<#
+Write-Host "Environments Master 0" -ForegroundColor Red
+$environmentsMaster[0]
+
+Write-Host "Environments Master 01" -ForegroundColor Red
+$environmentsMaster[0][1]
+
+Write-Host "Environments Master 01" -ForegroundColor Red
+$environmentsMaster[0][1][0]
+
+Write-Host "Environments Master 0112" -ForegroundColor Red
+$environmentsMaster[0][1][0][2].Value
+#>
 
 <# TO 'Logic' #>
 if ($type -eq 1){
-    . "$($stufferDirectory)\Logic\TEMPORARY\InPlace_Excel_Logic.ps1"
+   . "$($stufferDirectory)\Logic\TEMPORARY\InPlace_Excel_Logic.ps1"
 }
 if ($type -eq 2){
     . "$($stufferDirectory)\Logic\TEMPORARY\NewLogo_Upgrade_Excel_Logic.ps1"

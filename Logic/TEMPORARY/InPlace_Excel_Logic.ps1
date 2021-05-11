@@ -1,10 +1,10 @@
-Import-Module \\scripthost\modules\pvadmin
+#Import-Module \\scripthost\modules\pvadmin
 Import-Module SQLSERVER
 Import-Module F5-LTM
 
 <# COPYING EXCEL TEMPLATE #>
-Get-ChildItem -Path "F:\StufferDocs\Build Templates" -Filter "InPlace*" | Copy-Item -Destination "C:\Users\$($aAdmin)\Desktop"
-$excelFilePath = Get-ChildItem -Path "C:\Users\$($aAdmin)\Desktop\" -Filter "InPlace*" | ForEach-Object {$_.FullName}
+Get-ChildItem -Path "C:\Users\$($awsAdmin)\Planview, Inc\E1 Build Cutover - Documents\Customer Builds\1_FolderTemplate\18" -Filter "InPlace*" | Copy-Item -Destination "C:\Users\$($awsAdmin)\Desktop"
+$excelFilePath = Get-ChildItem -Path "C:\Users\$($awsAdmin)\Desktop\" -Filter "InPlace*" | ForEach-Object {$_.FullName}
 
 <# EXCEL OBJECT #>
 $excel = New-Object -ComObject Excel.Application
@@ -18,62 +18,87 @@ $buildData.Cells.Item(18,2)= "False"
 # SPLIT TIER #
 $buildData.Cells.Item(19,2)= "False"
 
+# PRODUCTION SERVER COUNT #
+$buildData.Cells.Item(23,2)= ($productionComputers.Count - 1)
+
+# SANDBOX SERVER COUNT #
+$buildData.Cells.Item(23,3)= ($sandboxComputers.Count - 1) 
+
 # CUSTOMER CODE #
 $buildData.Cells.Item(10,2)= $customerCode.ToUpper()
 
 # DATACENTER LOCATION #
 $buildData.Cells.Item(9,2)= $dataCenterLocation
 
-# AD OU NAME #
-$buildData.Cells.Item(14,2)= $AD_OU.Name
+# AD OU NAME (Pulled from Production Environment) #
+$AD_OU = $environmentsMaster[0][1][0][2].Value
+$buildData.Cells.Item(14,2)= $AD_OU
 
 # SAASINFO LINK #
-$buildData.Cells.Item(3,2)= "http://saasinfo.planview.world/$($customerName.Split(':')[0]).htm"
+#$buildData.Cells.Item(3,2)= "http://saasinfo.planview.world/$($customerName.Split(':')[0]).htm"
 
 <# MAIN LOOP #>
 for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
     
-    if ($environmentsMaster[$x][0] -eq "Production") { 
+    if ($environmentsMaster[$x][0] -eq $slot1) { 
         Write-Host ":::::::: $($environmentsMaster[$x][0]) Environment ::::::::" -Foregroundcolor Yellow
         
         $webServerCount = 0
         for ($y=1; $y -lt $environmentsMaster[$x].Length; $y++) {     
             
-            if ($environmentsMaster[$x][$y][0].Name.Substring(($environmentsMaster[$x][$y][0].Name.Length - 5), 3) -eq "app") {
+            if ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "app" -or $environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "ctm") {
             
                 ##########################
                 # PRODUCTION APP SERVER 
                 ##########################
-                if ($environmentsMaster[$x][$y][0].Name.Substring(3, 1) -ne 't') {
+                if ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "app") {
                     Write-Host "THIS IS THE PRODUCTION APP SERVER" -ForegroundColor Cyan
 
                     <# CPU/RAM #>
                     Write-Host "Server CPU and RAM" -ForegroundColor Red
-                    Write-Host "Server Name: $($environmentsMaster[$x][$y][0].Name)"
-                    Write-Host "Server CPUs: $($environmentsMaster[$x][$y][0].NumCpu)"
-                    Write-Host "Server RAM: $($environmentsMaster[$x][$y][0].MemoryGB)"
+                    Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
+                    Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
 
                     <# HARDDRIVES #> 
                     Write-Host "Disks and Disk Capacity" -ForegroundColor Red
                     $diskResize = "Yes"
                     $hdStringArray = ""
-                    foreach ($hd in $environmentsMaster[$x][$y][1]) {
-                        $hdString = "$($hd.Name): $($hd.CapacityGB)gb"
+                    foreach ($hd in $environmentsMaster[$x][$y][2][0]) {
+                        $hdString = "$($hd.DeviceID) $([MATH]::Round($hd.Size / 1GB,2))gb"
                         $hdStringArray += "$($hdString)`n"
                         Write-Host $hdString  
-                        if ($hd.CapacityGB -gt 60) {
+                        if (([MATH]::Round($hd.Size / 1GB,2)) -gt 60) {
                             $diskResize = "No"  
                         }
                     }
                     Write-Host "Standard Size Disks (less than 60GB): $($diskResize)"
 
-                    <# CLUSTER #>
-                    # Write-Host "Server Cluster" -ForegroundColor Red
-                    # Write-Host "Cluster Name: $($server[2].Name)"
+                    <# AWS METADATA #>
 
+                        # INSTANCE SIZE #
+                        Write-Host "Instance Size" -ForegroundColor Red
+                        $instanceSize = $environmentsMaster[$x][$y][1][2]
+                        Write-Host $instanceSize
+                        
+                        # AVAILABILITY ZONE #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $availabilityZone = $environmentsMaster[$x][$y][1][3]
+                        Write-Host $availabilityZone
+
+                        # IP ADDRESS #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $ipAddress = $environmentsMaster[$x][$y][1][4]
+                        Write-Host $ipAddress
+
+                        # INSTANCE ID #
+                        Write-Host "Instance ID" -ForegroundColor Red
+                        $instanceID = $environmentsMaster[$x][$y][1][0]
+                        Write-Host $instanceID
+                    
                     <# SCHEDULED TASKS #>
                     Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                    $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][0].Name -ScriptBlock {
+                    $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
                         Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                     } -Credential $credentials
 
@@ -85,7 +110,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     
                     <# OPEN SUITE #>
                     Write-Host "OpenSuite" -ForegroundColor Red
-                    $opensuite = Invoke-Command -ComputerName $environmentsMaster[$x][$y][0].Name -Credential $credentials -ScriptBlock {
+                    $opensuite = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
                         if ((Test-Path -Path "C:\ProgramData\Actian" -PathType Container) -And (Test-Path -Path "F:\Planview\Interfaces\OpenSuite" -PathType Container)) {
 
                             $software = "*Actian*";
@@ -101,64 +126,105 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     }
                     Write-Host "OpenSuite Detected: $($opensuite)"
 
-                    <# INTEGRATIONS #>
-                    Write-Host "Integrations" -ForegroundColor Red
-                    $PPAdapter = "False"
+                    <# CONNECTORS #>
+                    Write-Host "Connectors" -ForegroundColor Red
                     $PRMAdapter = "False"
+                    $PPAdapter = "False"
+                    $LKAdapter = "False"
 
-                    $integrations = Invoke-Command -ComputerName $environmentsMaster[$x][$y][0].Name -Credential $credentials -ScriptBlock {
-                        if (Test-Path -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\Integrations\*") {
+                    $PRMini = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
 
-                            $databaseNames = Get-ChildItem -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\Integrations\*" -Name 
-        
-                            $mainDatabase = ""
-                            foreach ($db in $databaseNames) {
-                                if (($db -like "*PROD") -or ($db -like "*DEV*")) {
-                                    $mainDatabase = $db
-                                }
+                        if (Test-Path -Path "F:\Planview\midtier\webserver\objects\PRM_Adapter_Config.ini" -PathType leaf){
+
+                            $PRMiniContent = (Get-Content -Path "F:\Planview\midtier\webserver\objects\PRM_Adapter_Config.ini" | Where-Object {$_.length -ne 0}) | Where-Object {$_.substring(0,1) -ne ";"}
+
+                            $masterArray = @()
+                            $databaseName = ""
+                            foreach($x in $PRMiniContent){
+
+                                $valuePair = New-Object PSObject
+                                Add-Member -InputObject $valuePair -MemberType NoteProperty -Name Database -Value ""
+                                Add-Member -InputObject $valuePair -MemberType NoteProperty -Name Key -Value ""
+
+                                if ($x -match "^\["){
+
+                                    $databaseName = $x.substring(1, ($x.length - 2)) 
+
+                                    $valuePair.Database = $databaseName
+                                    $valuePair.Key = $databaseName
+                                    $masterArray += $valuePair
+                                
+                                
+                                } else {       
+                                
+                                    $valuePair.Database = $databaseName
+                                    $valuePair.Key = $x 
+                                    $masterArray += $valuePair
+                                
+                                }           
                             }
-
-                            Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\Integrations\$($mainDatabase)\*" | Select-Object -Property PSChildName
+                        
+                            return $masterArray
                         
                         } else {
+
                             return 0
+
                         }
                     }
 
-                    
-                    if ($integrations -eq 0) {
+                    if ($PRMini -ne '0'){
 
-                        Write-Host "No integrations found in 'HKLM:\SOFTWARE\WOW6432Node\Planview\Integrations'"
+                        $PRMAdapter = "True"
+
+                        Write-Host "PRM Adapter Found"
+                        $LKKey = ($PRMini | Where-Object {$_.Database -like "*PROD"} | Where-Object {$_.Key -like "use_prm_leankit*"}).Key
+                        $PPKey = ($PRMini | Where-Object {$_.Database -like "*PROD"} | Where-Object {$_.Key -like "use_prm_projectplace*"}).Key
+
+                        if ($LKKey -like "*true*"){
+                            $LKAdapter = "True"
+                            Write-Host "LeanKit Connector --- True"
+                        } else {
+                            Write-Host "LeanKit Connector --- False"
+                        }
+
+                        if ($PPKey -like "*true*"){
+                            $PPAdapter = "True"
+                            Write-Host "ProjectPlace Connector --- True"
+                        } else {
+                            Write-Host "ProjectPlace Connector --- False"
+                        }
 
                     } else {
 
-                        Write-Host "Number of integrations found: $($integrations.PSChildName.Count)"
-                        
-                    <#     foreach ($x in $integrations.PSChildName) {
-                           if ($x -like "*ProjectPlace*") {
-                                Write-Host "PP ADAPTER FOUND: $($x)"
-                                $PPAdapter = "True"
-                            }
-                            elseif ($x -like "*PRM_Adapter*") {
-                                Write-Host "PRM ADAPTER FOUND: $($x)"
-                                $PRMAdapter= "True"
-                            } else {
-                                Write-Host "Other Integration Identified: $($x)"
-                            }  
-                        } #>
+                        Write-Host "PRM Adapter not found"
+
+                        $LegacyPPAdapter = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
+                            Test-Path -Path "F:\Planview\midtier\webserver\objects\ProjectPlace_Config.ini" -PathType leaf
+                        }
+
+                        $PPAdapter = $LegacyPPAdapter
+                        Write-Host "ProjectPlace (Legacy install) --- $($PPAdapter)"
 
                     }
                     
 
                     <# EXCEL LOGIC AND VARIABLES#>
-                    $buildData.Cells.Item(52,2)= "$($environmentsMaster[$x][$y][0].Name)"
-                    $buildData.Cells.Item(52,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                    $buildData.Cells.Item(52,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                    $buildData.Cells.Item(52,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    $buildData.Cells.Item(52,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                    $buildData.Cells.Item(52,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(52,5)= $hdStringArray
                     $buildData.Cells.Item(52,6)= $diskResize
                     $buildData.Cells.Item(52,7)= $task_array
 
+                    <# AWS-SPECIFIC VARIABLES #>
+                    $buildData.Cells.Item(52,8)= $instanceSize
+                    $buildData.Cells.Item(52,9)= $availabilityZone
+                    $buildData.Cells.Item(52,10)= $ipAddress
+                    $buildData.Cells.Item(52,11)= $instanceID
+
                     $buildData.Cells.Item(31,2)= $PPAdapter
+                    $buildData.Cells.Item(32,2)= $LKAdapter
                     $buildData.Cells.Item(37,2)= $PRMAdapter
 
                     $buildData.Cells.Item(36,2)= $opensuite
@@ -169,36 +235,54 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 ##################################
                 # PRODUCTION CTM SERVER (Troux) 
                 ##################################
-                elseif ($environmentsMaster[$x][$y][0].Name.Substring(3, 1) -eq 't') {
+                elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "ctm") {
                     Write-Host "THIS IS THE PRODUCTION TROUX SERVER" -ForegroundColor Cyan
 
                     <# CPU/RAM #>
                     Write-Host "Server CPU and RAM" -ForegroundColor Red
-                    Write-Host "Server Name: $($environmentsMaster[$x][$y][0].Name)"
-                    Write-Host "Server CPUs: $($environmentsMaster[$x][$y][0].NumCpu)"
-                    Write-Host "Server RAM: $($environmentsMaster[$x][$y][0].MemoryGB)"     
+                    Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
+                    Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"     
 
                     <# HARDDRIVES #>
                     Write-Host "Disks and Disk Capacity" -ForegroundColor Red
                     $diskResize = "Yes"
                     $hdStringArray = ""
-                    foreach ($hd in $environmentsMaster[$x][$y][1]) {
-                        $hdString = "$($hd.Name): $($hd.CapacityGB)gb"
+                    foreach ($hd in $environmentsMaster[$x][$y][2][0]) {
+                        $hdString = "$($hd.DeviceID) $([MATH]::Round($hd.Size / 1GB,2))gb"
                         $hdStringArray += "$($hdString)`n"
                         Write-Host $hdString  
-                        if ($hd.CapacityGB -gt 60) {
+                        if (([MATH]::Round($hd.Size / 1GB,2)) -gt 60) {
                             $diskResize = "No"  
                         }
                     }
                     Write-Host "Standard Size Disks (less than 60GB): $($diskResize)"       
 
-                    <# CLUSTER #>
-                    # Write-Host "Server Cluster" -ForegroundColor Red
-                    # Write-Host "Cluster Name: $($server[2].Name)"
+                    <# AWS METADATA #>
+
+                        # INSTANCE SIZE #
+                        Write-Host "Instance Size" -ForegroundColor Red
+                        $instanceSize = $environmentsMaster[$x][$y][1][2]
+                        Write-Host $instanceSize
+                        
+                        # AVAILABILITY ZONE #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $availabilityZone = $environmentsMaster[$x][$y][1][3]
+                        Write-Host $availabilityZone
+
+                        # IP ADDRESS #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $ipAddress = $environmentsMaster[$x][$y][1][4]
+                        Write-Host $ipAddress
+
+                        # INSTANCE ID #
+                        Write-Host "Instance ID" -ForegroundColor Red
+                        $instanceID = $environmentsMaster[$x][$y][1][0]
+                        Write-Host $instanceID
 
                     <# SCHEDULED TASKS #>
                     Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                    $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][0].Name -ScriptBlock {
+                    $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
                         Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                     } -Credential $credentials
 
@@ -209,12 +293,18 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     }
 
                     <# EXCEL LOGIC AND VARIABLES#>
-                    $buildData.Cells.Item(53,2)= "$($environmentsMaster[$x][$y][0].Name)"
-                    $buildData.Cells.Item(53,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                    $buildData.Cells.Item(53,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                    $buildData.Cells.Item(53,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    $buildData.Cells.Item(53,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                    $buildData.Cells.Item(53,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(53,5)= $hdStringArray
                     $buildData.Cells.Item(53,6)= $diskResize
                     $buildData.Cells.Item(53,7)= $task_array
+
+                    <# AWS-SPECIFIC VARIABLES #>
+                    $buildData.Cells.Item(53,8)= $instanceSize
+                    $buildData.Cells.Item(53,9)= $availabilityZone
+                    $buildData.Cells.Item(53,10)= $ipAddress
+                    $buildData.Cells.Item(53,11)= $instanceID
 
                     Write-Host "`n" -ForegroundColor Red  
                 }
@@ -223,37 +313,55 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
             ##########################
             # PRODUCTION WEB SERVER 
             ##########################
-            elseif ($environmentsMaster[$x][$y][0].Name.Substring(($environmentsMaster[$x][$y][0].Name.Length - 5), 3) -eq "web") {
+            elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "web") {
 
                 Write-Host "THIS IS THE PRODUCTION WEB SERVER" -ForegroundColor Cyan
 
                 <# CPU/RAM #>
                 Write-Host "Server CPU and RAM" -ForegroundColor Red
-                Write-Host "Server Name: $($environmentsMaster[$x][$y][0].Name)"
-                Write-Host "Server CPUs: $($environmentsMaster[$x][$y][0].NumCpu)"
-                Write-Host "Server RAM: $($environmentsMaster[$x][$y][0].MemoryGB)"
+                Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
+                Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
 
                 <# HARDDRIVES #>
                 Write-Host "Disks and Disk Capacity" -ForegroundColor Red
                 $diskResize = "Yes"
                 $hdStringArray = ""
-                foreach ($hd in $environmentsMaster[$x][$y][1]) {
-                    $hdString = "$($hd.Name): $($hd.CapacityGB)gb"
+                foreach ($hd in $environmentsMaster[$x][$y][2][0]) {
+                    $hdString = "$($hd.DeviceID) $([MATH]::Round($hd.Size / 1GB,2))gb"
                     $hdStringArray += "$($hdString)`n"
                     Write-Host $hdString  
-                    if ($hd.CapacityGB -gt 60) {
+                    if (([MATH]::Round($hd.Size / 1GB,2)) -gt 60) {
                         $diskResize = "No"  
                     }
                 }
                 Write-Host "Standard Size Disks (less than 60GB): $($diskResize)"
 
-                <# CLUSTER #>
-                # Write-Host "Server Cluster" -ForegroundColor Red
-                # Write-Host "Cluster Name: $($server[2].Name)"
+                <# AWS METADATA #>
+
+                        # INSTANCE SIZE #
+                        Write-Host "Instance Size" -ForegroundColor Red
+                        $instanceSize = $environmentsMaster[$x][$y][1][2]
+                        Write-Host $instanceSize
+                        
+                        # AVAILABILITY ZONE #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $availabilityZone = $environmentsMaster[$x][$y][1][3]
+                        Write-Host $availabilityZone
+
+                        # IP ADDRESS #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $ipAddress = $environmentsMaster[$x][$y][1][4]
+                        Write-Host $ipAddress
+
+                        # INSTANCE ID #
+                        Write-Host "Instance ID" -ForegroundColor Red
+                        $instanceID = $environmentsMaster[$x][$y][1][0]
+                        Write-Host $instanceID
 
                 <# SCHEDULED TASKS #>
                 Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][0].Name -ScriptBlock {
+                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
                     Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                 } -Credential $credentials
 
@@ -265,7 +373,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                 <# CURRENT VERSION #>
                 Write-Host "Current Environment Version" -ForegroundColor Red
-                $crVersion = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0].Name)" -Credential $credentials -ScriptBlock {
+                $crVersion = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
                     Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\WebServerPlatform"
                 }
                 Write-Host $crVersion.CrVersion
@@ -277,7 +385,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                 # NEW RELIC #
                 Write-Host "New Relic" -ForegroundColor Red
-                $newRelic = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0].Name)" -Credential $credentials -ScriptBlock {
+                $newRelic = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
                     if (Test-Path -Path "C:\ProgramData\New Relic" -PathType Container ) {
                         Write-Host "New Relic has been detected on this server"
                         return "Yes"
@@ -288,7 +396,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 }
 
                     # GET WEB CONFIG #
-                    $webConfig = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0].Name)" -Credential $credentials -ScriptBlock {
+                    $webConfig = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
                         return Get-Content -Path "F:\Planview\MidTier\ODataService\Web.config"
                     }
                     $webConfig = [xml] $webConfig
@@ -320,8 +428,9 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                 <# IP RESTRICTIONS #>
                 Write-Host "IP Restrictions on F5" -ForegroundColor Red
-                $IPRestrictions = "No"
-                    
+                Write-Host "Currently Not Automated"
+                $IPRestrictions = "Not Automated"
+<#                    
                     # Authentication on the F5 #
                     $websession =  New-Object Microsoft.PowerShell.Commands.WebRequestSession
                     $jsonbody = @{username = $f5Credentials.UserName ; password = $f5Credentials.GetNetworkCredential().Password; loginProviderName='tmos'} | ConvertTo-Json
@@ -343,7 +452,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     if ($IPRestrictions -eq "No") {
                         Write-Host "No IP restrictions found for $($dnsAlias).pvcloud.com"
                     }
-
+#>
                 <# EXCEL LOGIC AND VARIABLES#>
                 $buildData.Cells.Item(25,2)= $crVersion.CrVersion
                 $buildData.Cells.Item(35,2)= $IPRestrictions
@@ -356,20 +465,32 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 $buildData.Cells.Item(15,2)= $newRelic
 
                 if ($webServerCount -gt 0){
-                    $buildData.Cells.Item(58 + ($webServerCount - 1),2)= "$($environmentsMaster[$x][$y][0].Name)"
-                    $buildData.Cells.Item(58 + ($webServerCount - 1),3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                    $buildData.Cells.Item(58 + ($webServerCount - 1),4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                    $buildData.Cells.Item(58 + ($webServerCount - 1),2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    $buildData.Cells.Item(58 + ($webServerCount - 1),3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                    $buildData.Cells.Item(58 + ($webServerCount - 1),4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(58 + ($webServerCount - 1),5)= $hdStringArray
                     $buildData.Cells.Item(58 + ($webServerCount - 1),6)= $diskResize
                     $buildData.Cells.Item(58 + ($webServerCount - 1),7)= $task_array
+
+                    <# AWS-SPECIFIC VARIABLES #>
+                    $buildData.Cells.Item(58 + ($webServerCount - 1),8)= $instanceSize
+                    $buildData.Cells.Item(58 + ($webServerCount - 1),9)= $availabilityZone
+                    $buildData.Cells.Item(58 + ($webServerCount - 1),10)= $ipAddress
+                    $buildData.Cells.Item(58 + ($webServerCount - 1),11)= $instanceID
                 }
                 else {
-                    $buildData.Cells.Item(51,2)= "$($environmentsMaster[$x][$y][0].Name)"
-                    $buildData.Cells.Item(51,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                    $buildData.Cells.Item(51,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                    $buildData.Cells.Item(51,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    $buildData.Cells.Item(51,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                    $buildData.Cells.Item(51,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(51,5)= $hdStringArray
                     $buildData.Cells.Item(51,6)= $diskResize
                     $buildData.Cells.Item(51,7)= $task_array
+
+                    <# AWS-SPECIFIC VARIABLES #>
+                    $buildData.Cells.Item(51,8)= $instanceSize
+                    $buildData.Cells.Item(51,9)= $availabilityZone
+                    $buildData.Cells.Item(51,10)= $ipAddress
+                    $buildData.Cells.Item(51,11)= $instanceID
                 }
                 
                 $webServerCount++
@@ -383,36 +504,54 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
             ##########################
             # PRODUCTION SAS SERVER 
             ##########################
-            elseif ($environmentsMaster[$x][$y][0].Name.Substring(($environmentsMaster[$x][$y][0].Name.Length - 5), 3) -eq "sas") {
+            elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "sas") {
                 Write-Host "THIS IS THE PRODUCTION SAS SERVER" -ForegroundColor Cyan
 
                 <# CPU/RAM #>
                 Write-Host "Server CPU and RAM" -ForegroundColor Red
-                Write-Host "Server Name: $($environmentsMaster[$x][$y][0].Name)"
-                Write-Host "Server CPUs: $($environmentsMaster[$x][$y][0].NumCpu)"
-                Write-Host "Server RAM: $($environmentsMaster[$x][$y][0].MemoryGB)"
+                Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
+                Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
 
                 <# HARDDRIVES #>
                 Write-Host "Disks and Disk Capacity" -ForegroundColor Red
                 $diskResize = "Yes"
                 $hdStringArray = ""
-                foreach ($hd in $environmentsMaster[$x][$y][1]) {
-                    $hdString = "$($hd.Name): $($hd.CapacityGB)gb"
+                foreach ($hd in $environmentsMaster[$x][$y][2][0]) {
+                    $hdString = "$($hd.DeviceID) $([MATH]::Round($hd.Size / 1GB,2))gb"
                     $hdStringArray += "$($hdString)`n"
                     Write-Host $hdString  
-                    if ($hd.CapacityGB -gt 60) {
+                    if (([MATH]::Round($hd.Size / 1GB,2)) -gt 60) {
                         $diskResize = "No"  
                     }
                 }
                 Write-Host "Standard Size Disks (less than 60GB): $($diskResize)"
 
-                <# CLUSTER #>
-                # Write-Host "Server Cluster" -ForegroundColor Red
-                # Write-Host "Cluster Name: $($server[2].Name)"
+                <# AWS METADATA #>
+
+                        # INSTANCE SIZE #
+                        Write-Host "Instance Size" -ForegroundColor Red
+                        $instanceSize = $environmentsMaster[$x][$y][1][2]
+                        Write-Host $instanceSize
+                        
+                        # AVAILABILITY ZONE #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $availabilityZone = $environmentsMaster[$x][$y][1][3]
+                        Write-Host $availabilityZone
+
+                        # IP ADDRESS #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $ipAddress = $environmentsMaster[$x][$y][1][4]
+                        Write-Host $ipAddress
+
+                        # INSTANCE ID #
+                        Write-Host "Instance ID" -ForegroundColor Red
+                        $instanceID = $environmentsMaster[$x][$y][1][0]
+                        Write-Host $instanceID
 
                 <# SCHEDULED TASKS #>
                 Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][0].Name -ScriptBlock {
+                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
                     Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                 } -Credential $credentials
 
@@ -423,12 +562,18 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 }
                 
                 <# EXCEL LOGIC AND VARIABLES#>
-                $buildData.Cells.Item(55,2)= "$($environmentsMaster[$x][$y][0].Name)"
-                $buildData.Cells.Item(55,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                $buildData.Cells.Item(55,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                $buildData.Cells.Item(55,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                $buildData.Cells.Item(55,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                $buildData.Cells.Item(55,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                 $buildData.Cells.Item(55,5)= $hdStringArray
                 $buildData.Cells.Item(55,6)= $diskResize
                 $buildData.Cells.Item(55,7)= $task_array
+
+                <# AWS-SPECIFIC VARIABLES #>
+                $buildData.Cells.Item(55,8)= $instanceSize
+                $buildData.Cells.Item(55,9)= $availabilityZone
+                $buildData.Cells.Item(55,10)= $ipAddress
+                $buildData.Cells.Item(55,11)= $instanceID
 
                 Write-Host "`n" -ForegroundColor Red  
         }
@@ -436,36 +581,54 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
             ##########################
             # PRODUCTION SQL SERVER 
             ##########################
-            elseif ($environmentsMaster[$x][$y][0].Name.Substring(($environmentsMaster[$x][$y][0].Name.Length - 5), 3) -eq "sql") {
+            elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "sql") {
                 Write-Host "THIS IS THE PRODUCTION SQL SERVER" -ForegroundColor Cyan
 
                 <# CPU/RAM #>
                 Write-Host "Server CPU and RAM" -ForegroundColor Red
-                Write-Host "Server Name: $($environmentsMaster[$x][$y][0].Name)"
-                Write-Host "Server CPUs: $($environmentsMaster[$x][$y][0].NumCpu)"
-                Write-Host "Server RAM: $($environmentsMaster[$x][$y][0].MemoryGB)"
+                Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
+                Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
 
                 <# HARDDRIVES #>
                 Write-Host "Disks and Disk Capacity" -ForegroundColor Red
                 $diskResize = "Yes"
                 $hdStringArray = ""
-                foreach ($hd in $environmentsMaster[$x][$y][1]) {
-                    $hdString = "$($hd.Name): $($hd.CapacityGB)gb"
+                foreach ($hd in $environmentsMaster[$x][$y][2][0]) {
+                    $hdString = "$($hd.DeviceID) $([MATH]::Round($hd.Size / 1GB,2))gb"
                     $hdStringArray += "$($hdString)`n"
                     Write-Host $hdString  
-                    if ($hd.CapacityGB -gt 60) {
+                    if (([MATH]::Round($hd.Size / 1GB,2)) -gt 60) {
                         $diskResize = "No"  
                     }
                 }
                 Write-Host "Standard Size Disks (less than 60GB): $($diskResize)"
 
-                <# CLUSTER #>
-                # Write-Host "Server Cluster" -ForegroundColor Red
-                # Write-Host "Cluster Name: $($server[2].Name)"
+                <# AWS METADATA #>
+
+                        # INSTANCE SIZE #
+                        Write-Host "Instance Size" -ForegroundColor Red
+                        $instanceSize = $environmentsMaster[$x][$y][1][2]
+                        Write-Host $instanceSize
+                        
+                        # AVAILABILITY ZONE #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $availabilityZone = $environmentsMaster[$x][$y][1][3]
+                        Write-Host $availabilityZone
+
+                        # IP ADDRESS #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $ipAddress = $environmentsMaster[$x][$y][1][4]
+                        Write-Host $ipAddress
+
+                        # INSTANCE ID #
+                        Write-Host "Instance ID" -ForegroundColor Red
+                        $instanceID = $environmentsMaster[$x][$y][1][0]
+                        Write-Host $instanceID
 
                 <# SCHEDULED TASKS #>
                 Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][0].Name -ScriptBlock {
+                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
                     Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                 } -Credential $credentials
 
@@ -475,9 +638,14 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     $task_array += "$($task.TaskName)`n"
                 }
 
+                <# MAINTENANCE DAY #>
+                Write-Host "Maintenance Day" -ForegroundColor Red
+                $maintenanceDay = $environmentsMaster[$x][$y][0][4].Value
+                Write-Host $maintenanceDay
+
                 <# DATABASE PROPERTIES #>
                 Write-Host "Database Properties" -ForegroundColor Red
-                $sqlSession = New-PSSession -ComputerName $environmentsMaster[$x][$y][0].Name -Credential $credentials
+                $sqlSession = New-PSSession -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials
 
                     # ALL DATABASES (NAMES AND SIZES in MB)
                     $mainDatabase = ""
@@ -491,7 +659,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         WHERE d.database_id > 4 -- Skip system databases
                         GROUP BY d.name
                         ORDER BY d.name" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][0].Name, $mainDatabase
+                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase
                     foreach ($database in $all_databases) {
                         Write-Host "$($database.name) ---- $($database.Size_MB) MB"
                         if (($database.name -like "*PROD") -or ($database.name -like "*DEV*")) {
@@ -508,7 +676,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         param ($server)
                         Invoke-Sqlcmd -Query "SELECT name, value, [description] FROM sys.configurations WHERE name like
                         '%parallel%' ORDER BY name OPTION (RECOMPILE);" -ServerInstance $server.Name
-                    } -ArgumentList $environmentsMaster[$x][$y][0].Name
+                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName
                     $maxdop = $database_maxdop_threshold | Where-Object {$_.name -like "cost*"} | Select-Object -property value
                     $cost_threshold = $database_maxdop_threshold | Where-Object {$_.name -like "max*"} | Select-Object -property value
                     Write-Host "Max DOP --- $($maxdop.value) MB"
@@ -520,7 +688,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         param ($server)
                         Invoke-Sqlcmd -Query "SELECT name, value, [description] FROM sys.configurations WHERE name like
                         '%server memory%' ORDER BY name OPTION (RECOMPILE);" -ServerInstance $server.Name
-                    } -ArgumentList $environmentsMaster[$x][$y][0].Name 
+                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName 
                     $database_memory_max = $database_memory | where-Object {$_.name -like "max*"} | Select-Object -property value
                     $database_memory_min = $database_memory | where-Object {$_.name -like "min*"} | Select-Object -property value
                     Write-Host "Max Server Memory --- $($database_memory_max.value) MB"
@@ -538,7 +706,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         LEFT OUTER JOIN sys.dm_database_encryption_keys dm
                             ON db.database_id = dm.database_id;
                         GO" -ServerInstance $server 
-                    } -ArgumentList $environmentsMaster[$x][$y][0].Name
+                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName
                     $dbEncryption = $database_encryption | Where-Object {$_.name -eq $mainDatabase}
                     Write-Host "$($dbEncryption.name) --- $($dbEncryption.is_encrypted)"
 
@@ -550,7 +718,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         GO
                         exec sp_spaceused
                         GO" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][0].Name, $mainDatabase
+                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase
                     Write-Host "$($database_dbSize.database_name) --- $($database_dbSize.database_size)"
 
                     # CUSTOM MODELS
@@ -562,7 +730,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         WHERE bism_ind ='N' 
                         AND olap_obj_name 
                         NOT like 'PVE%'" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][0].Name, $mainDatabase | Select-Object -property olap_obj_name
+                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase | Select-Object -property olap_obj_name
                     foreach ($model in $database_custom_models.olap_obj_name) {
                         Write-Host $model
                     }          
@@ -599,7 +767,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         j.job_id,
                         p.name,
                         p.param_value;" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][0].Name, $mainDatabase
+                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase
                     $database_interfaces.ParamValue
 
                     # LICENSE COUNT
@@ -630,7 +798,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         LicenseRole,
                         LicenseCode,
                         r.seats" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][0].Name, $mainDatabase
+                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase
                     $licenseProperties = $database_license_count | Select-Object -Property LicenseRole,LicenseCount
                     $totalLicenseCount = 0
                     foreach ($license in $licenseProperties){
@@ -647,21 +815,27 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         FROM ip.pv_version 
                         WHERE release = 'PROGRESSING_WEB'
                         ORDER BY seq DESC;" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][0].Name, $mainDatabase
+                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase
                     $database_progressing_web_version.sub_release 
 
                 <# EXCEL LOGIC AND VARIABLES#>
-                $buildData.Cells.Item(11,2)= $environmentsMaster[$x][$y][0].Name.Substring(($environmentsMaster[$x][$y][0].Name.Length - 2), 2)
+                $buildData.Cells.Item(11,2)= $environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 2), 2)
                 $buildData.Cells.Item(44,2)= $database_dbSize.database_size
                 $buildData.Cells.Item(43,2)= $database_memory_max.value
                 $buildData.Cells.Item(42,2)= $database_memory_min.value
 
-                $buildData.Cells.Item(54,2)= "$($environmentsMaster[$x][$y][0].Name)"
-                $buildData.Cells.Item(54,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                $buildData.Cells.Item(54,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                $buildData.Cells.Item(54,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                $buildData.Cells.Item(54,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                $buildData.Cells.Item(54,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                 $buildData.Cells.Item(54,5)= $hdStringArray
                 $buildData.Cells.Item(54,6)= $diskResize
                 $buildData.Cells.Item(54,7)= $task_array
+
+                <# AWS-SPECIFIC VARIABLES #>
+                $buildData.Cells.Item(54,8)= $instanceSize
+                $buildData.Cells.Item(54,9)= $availabilityZone
+                $buildData.Cells.Item(54,10)= $ipAddress
+                $buildData.Cells.Item(54,11)= $instanceID
 
                 $buildData.Cells.Item(26,2)= $database_progressing_web_version.sub_release
 
@@ -675,7 +849,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 $databaseCount = 0
                 foreach ($database in $all_databases) {
                     $buildData.Cells.Item(99, (2 + $databaseCount))= $database.name
-                    $buildData.Cells.Item(100, (2 + $databaseCount))= "Size: $($database.Size_MB) MB"
+                    $buildData.Cells.Item(100, (2 + $databaseCount))= $database.Size_MB
                     $databaseCount++
                 }
 
@@ -690,6 +864,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 $buildData.Cells.Item(22,2)= $totalLicenseCount
                 $buildData.Cells.Item(40,2)= $cost_threshold.value            
                 $buildData.Cells.Item(39,2)= $maxdop.value
+                $buildData.Cells.Item(105,2)= $maintenanceDay
                 
                 Remove-PSSession -Session $sqlSession
 
@@ -699,36 +874,54 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
             ##########################
             # PRODUCTION PVE SERVER 
             ##########################
-            elseif ($environmentsMaster[$x][$y][0].Name.Substring(($environmentsMaster[$x][$y][0].Name.Length - 5), 3) -eq "pve") {
+            elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "pve") {
                 Write-Host "THIS IS THE PRODUCTION PVE SERVER" -ForegroundColor Cyan
 
                 <# CPU/RAM #>
                 Write-Host "Server CPU and RAM" -ForegroundColor Red
-                Write-Host "Server Name: $($environmentsMaster[$x][$y][0].Name)"
-                Write-Host "Server CPUs: $($environmentsMaster[$x][$y][0].NumCpu)"
-                Write-Host "Server RAM: $($environmentsMaster[$x][$y][0].MemoryGB)"  
+                Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
+                Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"  
 
                 <# HARDDRIVES #>
                 Write-Host "Disks and Disk Capacity" -ForegroundColor Red
                 $diskResize = "Yes"
                 $hdStringArray = ""
-                foreach ($hd in $environmentsMaster[$x][$y][1]) {
-                    $hdString = "$($hd.Name): $($hd.CapacityGB)gb"
+                foreach ($hd in $environmentsMaster[$x][$y][2][0]) {
+                    $hdString = "$($hd.DeviceID) $([MATH]::Round($hd.Size / 1GB,2))gb"
                     $hdStringArray += "$($hdString)`n"
                     Write-Host $hdString  
-                    if ($hd.CapacityGB -gt 60) {
+                    if (([MATH]::Round($hd.Size / 1GB,2)) -gt 60) {
                         $diskResize = "No"  
                     }
                 }
                 Write-Host "Standard Size Disks (less than 60GB): $($diskResize)"
 
-                <# CLUSTER #>
-                # Write-Host "Server Cluster" -ForegroundColor Red
-                # Write-Host "Cluster Name: $($server[2].Name)"
+                <# AWS METADATA #>
+
+                        # INSTANCE SIZE #
+                        Write-Host "Instance Size" -ForegroundColor Red
+                        $instanceSize = $environmentsMaster[$x][$y][1][2]
+                        Write-Host $instanceSize
+                        
+                        # AVAILABILITY ZONE #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $availabilityZone = $environmentsMaster[$x][$y][1][3]
+                        Write-Host $availabilityZone
+
+                        # IP ADDRESS #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $ipAddress = $environmentsMaster[$x][$y][1][4]
+                        Write-Host $ipAddress
+
+                        # INSTANCE ID #
+                        Write-Host "Instance ID" -ForegroundColor Red
+                        $instanceID = $environmentsMaster[$x][$y][1][0]
+                        Write-Host $instanceID
 
                 <# SCHEDULED TASKS #>
                 Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][0].Name -ScriptBlock {
+                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
                     Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                 } -Credential $credentials
 
@@ -740,7 +933,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                 <# CURRENT VERSION #>
                 Write-Host "Current Environment Version" -ForegroundColor Red
-                $crVersion = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0].Name)" -Credential $credentials -ScriptBlock {
+                $crVersion = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
                     Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\WebServerPlatform"
                 }
                 Write-Host $crVersion.CrVersion
@@ -752,7 +945,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                 <# OPEN SUITE #>
                 Write-Host "OpenSuite" -ForegroundColor Red
-                $opensuite = Invoke-Command -ComputerName $environmentsMaster[$x][$y][0].Name -Credential $credentials -ScriptBlock {
+                $opensuite = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
                     if ((Test-Path -Path "C:\ProgramData\Actian" -PathType Container) -And (Test-Path -Path "F:\Planview\Interfaces\OpenSuite" -PathType Container)) {
 
                         $software = "*Actian*";
@@ -768,57 +961,91 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 }
                 Write-Host "OpenSuite Detected: $($opensuite)"
 
-                <# INTEGRATIONS #>
-                Write-Host "Integrations" -ForegroundColor Red
-                    $PPAdapter = "False"
-                    $PRMAdapter = "False"
+                <# CONNECTORS #>
+                Write-Host "Connectors" -ForegroundColor Red
+                $PRMAdapter = "False"
+                $PPAdapter = "False"
+                $LKAdapter = "False"
 
-                    $integrations = Invoke-Command -ComputerName $environmentsMaster[$x][$y][0].Name -Credential $credentials -ScriptBlock {
-                        if (Test-Path -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\Integrations\*") {
+                $PRMini = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
 
-                            $databaseNames = Get-ChildItem -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\Integrations\*" -Name 
-        
-                            $mainDatabase = ""
-                            foreach ($db in $databaseNames) {
-                                if (($db -like "*PROD") -or ($db -like "*DEV*")) {
-                                    $mainDatabase = $db
-                                }
-                            }
+                    if (Test-Path -Path "F:\Planview\midtier\webserver\objects\PRM_Adapter_Config.ini" -PathType leaf){
 
-                            Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\Integrations\$($mainDatabase)\*" | Select-Object -Property PSChildName
-                        
-                        } else {
-                            return 0
+                        $PRMiniContent = (Get-Content -Path "F:\Planview\midtier\webserver\objects\PRM_Adapter_Config.ini" | Where-Object {$_.length -ne 0}) | Where-Object {$_.substring(0,1) -ne ";"}
+
+                        $masterArray = @()
+                        $databaseName = ""
+                        foreach($x in $PRMiniContent){
+
+                            $valuePair = New-Object PSObject
+                            Add-Member -InputObject $valuePair -MemberType NoteProperty -Name Database -Value ""
+                            Add-Member -InputObject $valuePair -MemberType NoteProperty -Name Key -Value ""
+
+                            if ($x -match "^\["){
+
+                                $databaseName = $x.substring(1, ($x.length - 2)) 
+
+                                $valuePair.Database = $databaseName
+                                $valuePair.Key = $databaseName
+                                $masterArray += $valuePair
+                            
+                            
+                            } else {       
+                            
+                                $valuePair.Database = $databaseName
+                                $valuePair.Key = $x 
+                                $masterArray += $valuePair
+                            
+                            }           
                         }
-                    }
-
                     
-                    if ($integrations -eq 0) {
-
-                        Write-Host "No integrations found in 'HKLM:\SOFTWARE\WOW6432Node\Planview\Integrations'"
-
+                        return $masterArray
+                    
                     } else {
 
-                        Write-Host "Number of integrations found: $($integrations.PSChildName.Count)"
-                        
-                    <#     foreach ($x in $integrations.PSChildName) {
-                           if ($x -like "*ProjectPlace*") {
-                                Write-Host "PP ADAPTER FOUND: $($x)"
-                                $PPAdapter = "True"
-                            }
-                            elseif ($x -like "*PRM_Adapter*") {
-                                Write-Host "PRM ADAPTER FOUND: $($x)"
-                                $PRMAdapter= "True"
-                            } else {
-                                Write-Host "Other Integration Identified: $($x)"
-                            }  
-                        } #>
+                        return 0
 
                     }
+                }
+
+                if ($PRMini -ne '0'){
+
+                    $PRMAdapter = "True"
+
+                    Write-Host "PRM Adapter Found"
+                    $LKKey = ($PRMini | Where-Object {$_.Database -like "*PROD"} | Where-Object {$_.Key -like "use_prm_leankit*"}).Key
+                    $PPKey = ($PRMini | Where-Object {$_.Database -like "*PROD"} | Where-Object {$_.Key -like "use_prm_projectplace*"}).Key
+
+                    if ($LKKey -like "*true*"){
+                        $LKAdapter = "True"
+                        Write-Host "LeanKit Connector --- True"
+                    } else {
+                        Write-Host "LeanKit Connector --- False"
+                    }
+
+                    if ($PPKey -like "*true*"){
+                        $PPAdapter = "True"
+                        Write-Host "ProjectPlace Connector --- True"
+                    } else {
+                        Write-Host "ProjectPlace Connector --- False"
+                    }
+
+                } else {
+
+                    Write-Host "PRM Adapter not found"
+
+                    $LegacyPPAdapter = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
+                        Test-Path -Path "F:\Planview\midtier\webserver\objects\ProjectPlace_Config.ini" -PathType leaf
+                    }
+
+                    $PPAdapter = $LegacyPPAdapter
+                    Write-Host "ProjectPlace (Legacy install) --- $($PPAdapter)"
+
+                }
 
                 # NEW RELIC #
                 Write-Host "New Relic" -ForegroundColor Red
-                $newRelic = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0].Name)" -Credential $credentials -ScriptBlock {
+                $newRelic = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
                     if (Test-Path -Path "C:\ProgramData\New Relic" -PathType Container ) {
                         Write-Host "New Relic has been detected on this server"
                         return "Yes"
@@ -829,7 +1056,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 }
 
                     # GET WEB CONFIG #
-                    $webConfig = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0].Name)" -Credential $credentials -ScriptBlock {
+                    $webConfig = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
                         return Get-Content -Path "F:\Planview\MidTier\ODataService\Web.config"
                     }
                     $webConfig = [xml] $webConfig
@@ -861,8 +1088,9 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                 <# IP RESTRICTIONS #>
                 Write-Host "IP Restrictions on F5" -ForegroundColor Red
-                $IPRestrictions = "No"
-                    
+                Write-Host "Currently Not Automated"
+                $IPRestrictions = "Not Automated"
+<#                    
                     # Authentication on the F5 #
                     $websession =  New-Object Microsoft.PowerShell.Commands.WebRequestSession
                     $jsonbody = @{username = $f5Credentials.UserName ; password = $f5Credentials.GetNetworkCredential().Password; loginProviderName='tmos'} | ConvertTo-Json
@@ -884,7 +1112,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     if ($IPRestrictions -eq "No") {
                         Write-Host "No IP restrictions found for $($dnsAlias).pvcloud.com"
                     }
-                
+#>                
                 <# EXCEL LOGIC AND VARIABLES#>
                 $webServerCount++
                 $buildData.Cells.Item(24,2)= $webServerCount
@@ -902,16 +1130,23 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 
 
                 $buildData.Cells.Item(31,2)= $PPAdapter
+                $buildData.Cells.Item(32,2)= $LKAdapter
                 $buildData.Cells.Item(37,2)= $PRMAdapter
                 
                 
 
-                $buildData.Cells.Item(56,2)= "$($environmentsMaster[$x][$y][0].Name)"
-                $buildData.Cells.Item(56,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                $buildData.Cells.Item(56,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                $buildData.Cells.Item(56,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                $buildData.Cells.Item(56,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                $buildData.Cells.Item(56,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                 $buildData.Cells.Item(56,5)= $hdStringArray
                 $buildData.Cells.Item(56,6)= $diskResize
                 $buildData.Cells.Item(56,7)= $task_array
+
+                <# AWS-SPECIFIC VARIABLES #>
+                $buildData.Cells.Item(56,8)= $instanceSize
+                $buildData.Cells.Item(56,9)= $availabilityZone
+                $buildData.Cells.Item(56,10)= $ipAddress
+                $buildData.Cells.Item(56,11)= $instanceID
 
                 Write-Host "`n" -ForegroundColor Red  
             }
@@ -920,47 +1155,65 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
     } 
     
-    if ($environmentsMaster[$x][0] -eq "Sandbox") { 
+    if ($environmentsMaster[$x][0] -eq $slot2) { 
         Write-Host ":::::::: $($environmentsMaster[$x][0]) Environment ::::::::" -Foregroundcolor Yellow
         
         $webServerCount = 0
         for ($y=1; $y -lt $environmentsMaster[$x].Length; $y++) {        
 
-            if ($environmentsMaster[$x][$y][0].Name.Substring(($environmentsMaster[$x][$y][0].Name.Length - 5), 3) -eq "app") {
+            if ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "app" -or $environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "ctm") {
         
                 #######################
                 # SANDBOX APP SERVER 
                 #######################
-                if ($environmentsMaster[$x][$y][0].Name.Substring(3, 1) -ne 't') {
+                if ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "app") {
                     Write-Host "THIS IS THE SANDBOX APP SERVER" -ForegroundColor Cyan
         
                     <# CPU/RAM #>
                     Write-Host "Server CPU and RAM" -ForegroundColor Red
-                    Write-Host "Server Name: $($environmentsMaster[$x][$y][0].Name)"
-                    Write-Host "Server CPUs: $($environmentsMaster[$x][$y][0].NumCpu)"
-                    Write-Host "Server RAM: $($environmentsMaster[$x][$y][0].MemoryGB)"
+                    Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
+                    Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
         
                     <# HARDDRIVES #>
                     Write-Host "Disks and Disk Capacity" -ForegroundColor Red
                     $diskResize = "Yes"
                     $hdStringArray = ""
-                    foreach ($hd in $environmentsMaster[$x][$y][1]) {
-                        $hdString = "$($hd.Name): $($hd.CapacityGB)gb"
+                    foreach ($hd in $environmentsMaster[$x][$y][2][0]) {
+                        $hdString = "$($hd.DeviceID) $([MATH]::Round($hd.Size / 1GB,2))gb"
                         $hdStringArray += "$($hdString)`n"
                         Write-Host $hdString  
-                        if ($hd.CapacityGB -gt 60) {
+                        if (([MATH]::Round($hd.Size / 1GB,2)) -gt 60) {
                             $diskResize = "No"  
                         }
                     }
                     Write-Host "Standard Size Disks (less than 60GB): $($diskResize)"
         
-                    <# CLUSTER #>
-                    # Write-Host "Server Cluster" -ForegroundColor Red
-                    # Write-Host "Cluster Name: $($server[2].Name)"
+                    <# AWS METADATA #>
+
+                        # INSTANCE SIZE #
+                        Write-Host "Instance Size" -ForegroundColor Red
+                        $instanceSize = $environmentsMaster[$x][$y][1][2]
+                        Write-Host $instanceSize
+                        
+                        # AVAILABILITY ZONE #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $availabilityZone = $environmentsMaster[$x][$y][1][3]
+                        Write-Host $availabilityZone
+
+                        # IP ADDRESS #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $ipAddress = $environmentsMaster[$x][$y][1][4]
+                        Write-Host $ipAddress
+
+                        # INSTANCE ID #
+                        Write-Host "Instance ID" -ForegroundColor Red
+                        $instanceID = $environmentsMaster[$x][$y][1][0]
+                        Write-Host $instanceID
         
                     <# SCHEDULED TASKS #>
                     Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                    $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][0].Name -ScriptBlock {
+                    $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
                         Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                     } -Credential $credentials
 
@@ -972,7 +1225,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     
                     <# OPEN SUITE #>
                     Write-Host "OpenSuite" -ForegroundColor Red
-                    $opensuite = Invoke-Command -ComputerName $environmentsMaster[$x][$y][0].Name -Credential $credentials -ScriptBlock {
+                    $opensuite = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
                         if ((Test-Path -Path "C:\ProgramData\Actian" -PathType Container) -And (Test-Path -Path "F:\Planview\Interfaces\OpenSuite" -PathType Container)) {
         
                             $software = "*Actian*";
@@ -988,63 +1241,104 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     }
                     Write-Host "OpenSuite Detected: $($opensuite)"
         
-                    <# INTEGRATIONS #>
-                    Write-Host "Integrations" -ForegroundColor Red
-                    $PPAdapter = "False"
+                    <# CONNECTORS #>
+                    Write-Host "Connectors" -ForegroundColor Red
                     $PRMAdapter = "False"
+                    $PPAdapter = "False"
+                    $LKAdapter = "False"
 
-                    $integrations = Invoke-Command -ComputerName $environmentsMaster[$x][$y][0].Name -Credential $credentials -ScriptBlock {
-                        if (Test-Path -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\Integrations\*") {
+                    $PRMini = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
 
-                            $databaseNames = Get-ChildItem -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\Integrations\*" -Name 
-        
-                            $mainDatabase = ""
-                            foreach ($db in $databaseNames) {
-                                if (($db -like "*SANDBOX1") -or ($db -like "*TEST*")) {
-                                    $mainDatabase = $db
-                                }
+                        if (Test-Path -Path "F:\Planview\midtier\webserver\objects\PRM_Adapter_Config.ini" -PathType leaf){
+
+                            $PRMiniContent = (Get-Content -Path "F:\Planview\midtier\webserver\objects\PRM_Adapter_Config.ini" | Where-Object {$_.length -ne 0}) | Where-Object {$_.substring(0,1) -ne ";"}
+
+                            $masterArray = @()
+                            $databaseName = ""
+                            foreach($x in $PRMiniContent){
+
+                                $valuePair = New-Object PSObject
+                                Add-Member -InputObject $valuePair -MemberType NoteProperty -Name Database -Value ""
+                                Add-Member -InputObject $valuePair -MemberType NoteProperty -Name Key -Value ""
+
+                                if ($x -match "^\["){
+
+                                    $databaseName = $x.substring(1, ($x.length - 2)) 
+
+                                    $valuePair.Database = $databaseName
+                                    $valuePair.Key = $databaseName
+                                    $masterArray += $valuePair
+                                
+                                
+                                } else {       
+                                
+                                    $valuePair.Database = $databaseName
+                                    $valuePair.Key = $x 
+                                    $masterArray += $valuePair
+                                
+                                }           
                             }
-
-                            Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\Integrations\$($mainDatabase)\*" | Select-Object -Property PSChildName
+                        
+                            return $masterArray
                         
                         } else {
+
                             return 0
+
                         }
                     }
 
-                    
-                    if ($integrations -eq 0) {
+                    if ($PRMini -ne '0'){
 
-                        Write-Host "No integrations found in 'HKLM:\SOFTWARE\WOW6432Node\Planview\Integrations'"
+                        $PRMAdapter = "True"
+
+                        Write-Host "PRM Adapter Found"
+                        $LKKey = ($PRMini | Where-Object {$_.Database -like "*SANDBOX*"} | Where-Object {$_.Key -like "use_prm_leankit*"}).Key
+                        $PPKey = ($PRMini | Where-Object {$_.Database -like "*SANDBOX*"} | Where-Object {$_.Key -like "use_prm_projectplace*"}).Key
+
+                        if ($LKKey -like "*true*"){
+                            $LKAdapter = "True"
+                            Write-Host "LeanKit Connector --- True"
+                        } else {
+                            Write-Host "LeanKit Connector --- False"
+                        }
+
+                        if ($PPKey -like "*true*"){
+                            $PPAdapter = "True"
+                            Write-Host "ProjectPlace Connector --- True"
+                        } else {
+                            Write-Host "ProjectPlace Connector --- False"
+                        }
 
                     } else {
 
-                        Write-Host "Number of integrations found: $($integrations.PSChildName.Count)"
-                        
-                    <#     foreach ($x in $integrations.PSChildName) {
-                           if ($x -like "*ProjectPlace*") {
-                                Write-Host "PP ADAPTER FOUND: $($x)"
-                                $PPAdapter = "True"
-                            }
-                            elseif ($x -like "*PRM_Adapter*") {
-                                Write-Host "PRM ADAPTER FOUND: $($x)"
-                                $PRMAdapter= "True"
-                            } else {
-                                Write-Host "Other Integration Identified: $($x)"
-                            }  
-                        } #>
+                        Write-Host "PRM Adapter not found"
+
+                        $LegacyPPAdapter = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
+                            Test-Path -Path "F:\Planview\midtier\webserver\objects\ProjectPlace_Config.ini" -PathType leaf
+                        }
+
+                        $PPAdapter = $LegacyPPAdapter
+                        Write-Host "ProjectPlace (Legacy install) --- $($PPAdapter)"
 
                     }
                     
                     <# EXCEL LOGIC AND VARIABLES#>
-                    $buildData.Cells.Item(72,2)= "$($environmentsMaster[$x][$y][0].Name)"
-                    $buildData.Cells.Item(72,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                    $buildData.Cells.Item(72,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                    $buildData.Cells.Item(72,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    $buildData.Cells.Item(72,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                    $buildData.Cells.Item(72,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(72,5)= $hdStringArray
                     $buildData.Cells.Item(72,6)= $diskResize
                     $buildData.Cells.Item(72,7)= $task_array
+
+                    <# AWS-SPECIFIC VARIABLES #>
+                    $buildData.Cells.Item(72,8)= $instanceSize
+                    $buildData.Cells.Item(72,9)= $availabilityZone
+                    $buildData.Cells.Item(72,10)= $ipAddress
+                    $buildData.Cells.Item(72,11)= $instanceID
         
                     $buildData.Cells.Item(31,3)= $PPAdapter
+                    $buildData.Cells.Item(32,3)= $LKAdapter
                     $buildData.Cells.Item(37,3)= $PRMAdapter
                     
                     $buildData.Cells.Item(36,3)= $opensuite
@@ -1055,36 +1349,54 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 ###############################
                 # SANDBOX CTM SERVER (Troux) 
                 ###############################
-                elseif ($environmentsMaster[$x][$y][0].Name.Substring(3, 1) -eq 't') {
+                elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "ctm") {
                     Write-Host "THIS IS THE SANDBOX TROUX SERVER" -ForegroundColor Cyan
         
                     <# CPU/RAM #>
                     Write-Host "Server CPU and RAM" -ForegroundColor Red
-                    Write-Host "Server Name: $($environmentsMaster[$x][$y][0].Name)"
-                    Write-Host "Server CPUs: $($environmentsMaster[$x][$y][0].NumCpu)"
-                    Write-Host "Server RAM: $($environmentsMaster[$x][$y][0].MemoryGB)"    
+                    Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
+                    Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"    
         
                     <# HARDDRIVES #>
                     Write-Host "Disks and Disk Capacity" -ForegroundColor Red
                     $diskResize = "Yes"
                     $hdStringArray = ""
-                    foreach ($hd in $environmentsMaster[$x][$y][1]) {
-                        $hdString = "$($hd.Name): $($hd.CapacityGB)gb"
+                    foreach ($hd in $environmentsMaster[$x][$y][2][0]) {
+                        $hdString = "$($hd.DeviceID) $([MATH]::Round($hd.Size / 1GB,2))gb"
                         $hdStringArray += "$($hdString)`n"
                         Write-Host $hdString  
-                        if ($hd.CapacityGB -gt 60) {
+                        if (([MATH]::Round($hd.Size / 1GB,2)) -gt 60) {
                             $diskResize = "No"  
                         }
                     }
                     Write-Host "Standard Size Disks (less than 60GB): $($diskResize)"       
         
-                    <# CLUSTER #>
-                    # Write-Host "Server Cluster" -ForegroundColor Red
-                    # Write-Host "Cluster Name: $($server[2].Name)"
+                    <# AWS METADATA #>
+
+                        # INSTANCE SIZE #
+                        Write-Host "Instance Size" -ForegroundColor Red
+                        $instanceSize = $environmentsMaster[$x][$y][1][2]
+                        Write-Host $instanceSize
+                        
+                        # AVAILABILITY ZONE #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $availabilityZone = $environmentsMaster[$x][$y][1][3]
+                        Write-Host $availabilityZone
+
+                        # IP ADDRESS #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $ipAddress = $environmentsMaster[$x][$y][1][4]
+                        Write-Host $ipAddress
+
+                        # INSTANCE ID #
+                        Write-Host "Instance ID" -ForegroundColor Red
+                        $instanceID = $environmentsMaster[$x][$y][1][0]
+                        Write-Host $instanceID
         
                     <# SCHEDULED TASKS #>
                     Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                    $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][0].Name -ScriptBlock {
+                    $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
                         Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                     } -Credential $credentials
 
@@ -1095,12 +1407,18 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     }
                     
                     <# EXCEL LOGIC AND VARIABLES#>
-                    $buildData.Cells.Item(73,2)= "$($environmentsMaster[$x][$y][0].Name)"
-                    $buildData.Cells.Item(73,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                    $buildData.Cells.Item(73,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                    $buildData.Cells.Item(73,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    $buildData.Cells.Item(73,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                    $buildData.Cells.Item(73,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(73,5)= $hdStringArray
                     $buildData.Cells.Item(73,6)= $diskResize
                     $buildData.Cells.Item(73,7)= $task_array
+
+                    <# AWS-SPECIFIC VARIABLES #>
+                    $buildData.Cells.Item(73,8)= $instanceSize
+                    $buildData.Cells.Item(73,9)= $availabilityZone
+                    $buildData.Cells.Item(73,10)= $ipAddress
+                    $buildData.Cells.Item(73,11)= $instanceID
         
                     Write-Host "`n" -ForegroundColor Red  
                 }
@@ -1109,36 +1427,54 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
             #######################
             # SANDBOX WEB SERVER 
             #######################
-            elseif ($environmentsMaster[$x][$y][0].Name.Substring(($environmentsMaster[$x][$y][0].Name.Length - 5), 3) -eq "web") {
+            elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "web") {
                 Write-Host "THIS IS THE SANDBOX WEB SERVER" -ForegroundColor Cyan
         
                 <# CPU/RAM #>
                 Write-Host "Server CPU and RAM" -ForegroundColor Red
-                Write-Host "Server Name: $($environmentsMaster[$x][$y][0].Name)"
-                Write-Host "Server CPUs: $($environmentsMaster[$x][$y][0].NumCpu)"
-                Write-Host "Server RAM: $($environmentsMaster[$x][$y][0].MemoryGB)"
+                Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
+                Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
         
                 <# HARDDRIVES #>
                 Write-Host "Disks and Disk Capacity" -ForegroundColor Red
                 $diskResize = "Yes"
                 $hdStringArray = ""
-                foreach ($hd in $environmentsMaster[$x][$y][1]) {
-                    $hdString = "$($hd.Name): $($hd.CapacityGB)gb"
+                foreach ($hd in $environmentsMaster[$x][$y][2][0]) {
+                    $hdString = "$($hd.DeviceID) $([MATH]::Round($hd.Size / 1GB,2))gb"
                     $hdStringArray += "$($hdString)`n"
                     Write-Host $hdString  
-                    if ($hd.CapacityGB -gt 60) {
+                    if (([MATH]::Round($hd.Size / 1GB,2)) -gt 60) {
                         $diskResize = "No"  
                     }
                 }
                 Write-Host "Standard Size Disks (less than 60GB): $($diskResize)"
         
-                <# CLUSTER #>
-                # Write-Host "Server Cluster" -ForegroundColor Red
-                # Write-Host "Cluster Name: $($server[2].Name)"
+                <# AWS METADATA #>
+
+                        # INSTANCE SIZE #
+                        Write-Host "Instance Size" -ForegroundColor Red
+                        $instanceSize = $environmentsMaster[$x][$y][1][2]
+                        Write-Host $instanceSize
+                        
+                        # AVAILABILITY ZONE #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $availabilityZone = $environmentsMaster[$x][$y][1][3]
+                        Write-Host $availabilityZone
+
+                        # IP ADDRESS #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $ipAddress = $environmentsMaster[$x][$y][1][4]
+                        Write-Host $ipAddress
+
+                        # INSTANCE ID #
+                        Write-Host "Instance ID" -ForegroundColor Red
+                        $instanceID = $environmentsMaster[$x][$y][1][0]
+                        Write-Host $instanceID
         
                 <# SCHEDULED TASKS #>
                 Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][0].Name -ScriptBlock {
+                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
                     Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                 } -Credential $credentials
 
@@ -1150,7 +1486,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
         
                 <# CURRENT VERSION #>
                 Write-Host "Current Environment Version" -ForegroundColor Red
-                $crVersion = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0].Name)" -Credential $credentials -ScriptBlock {
+                $crVersion = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
                     Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\WebServerPlatform"
                 }
                 Write-Host $crVersion.CrVersion
@@ -1162,7 +1498,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
         
                 # NEW RELIC #
                 Write-Host "New Relic" -ForegroundColor Red
-                $newRelic = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0].Name)" -Credential $credentials -ScriptBlock {
+                $newRelic = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
                     if (Test-Path -Path "C:\ProgramData\New Relic" -PathType Container ) {
                         Write-Host "New Relic has been detected on this server"
                         return "Yes"
@@ -1173,7 +1509,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 }
         
                     # GET WEB CONFIG #
-                    $webConfig = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0].Name)" -Credential $credentials -ScriptBlock {
+                    $webConfig = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
                         return Get-Content -Path "F:\Planview\MidTier\ODataService\Web.config"
                     }
                     $webConfig = [xml] $webConfig
@@ -1195,8 +1531,9 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
         
                 <# IP RESTRICTIONS #>
                 Write-Host "IP Restrictions on F5" -ForegroundColor Red
-                $IPRestrictions = "No"
-                    
+                Write-Host "Currently Not Automated"
+                $IPRestrictions = "Not Automated"
+<#                    
                     # Authentication on the F5 #
                     $websession =  New-Object Microsoft.PowerShell.Commands.WebRequestSession
                     $jsonbody = @{username = $f5Credentials.UserName ; password = $f5Credentials.GetNetworkCredential().Password; loginProviderName='tmos'} | ConvertTo-Json
@@ -1218,7 +1555,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     if ($IPRestrictions -eq "No") {
                         Write-Host "No IP restrictions found for $($dnsAlias).pvcloud.com"
                     }
-        
+#>        
                 <# EXCEL LOGIC AND VARIABLES#>
                 $buildData.Cells.Item(25,3)= $crVersion.CrVersion
                 $buildData.Cells.Item(35,3)= $IPRestrictions
@@ -1227,20 +1564,32 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 
         
                 if ($webServerCount -gt 0){
-                    $buildData.Cells.Item(78 + ($webServerCount - 1),2)= "$($environmentsMaster[$x][$y][0].Name)"
-                    $buildData.Cells.Item(78 + ($webServerCount - 1),3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                    $buildData.Cells.Item(78 + ($webServerCount - 1),4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                    $buildData.Cells.Item(78 + ($webServerCount - 1),2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    $buildData.Cells.Item(78 + ($webServerCount - 1),3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                    $buildData.Cells.Item(78 + ($webServerCount - 1),4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(78 + ($webServerCount - 1),5)= $hdStringArray
                     $buildData.Cells.Item(78 + ($webServerCount - 1),6)= $diskResize
                     $buildData.Cells.Item(78 + ($webServerCount - 1),7)= $task_array
+
+                    <# AWS-SPECIFIC VARIABLES #>
+                    $buildData.Cells.Item(78 + ($webServerCount - 1),8)= $instanceSize
+                    $buildData.Cells.Item(78 + ($webServerCount - 1),9)= $availabilityZone
+                    $buildData.Cells.Item(78 + ($webServerCount - 1),10)= $ipAddress
+                    $buildData.Cells.Item(78 + ($webServerCount - 1),11)= $instanceID
                 }
                 else {
-                    $buildData.Cells.Item(71,2)= "$($environmentsMaster[$x][$y][0].Name)"
-                    $buildData.Cells.Item(71,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                    $buildData.Cells.Item(71,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                    $buildData.Cells.Item(71,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    $buildData.Cells.Item(71,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                    $buildData.Cells.Item(71,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(71,5)= $hdStringArray
                     $buildData.Cells.Item(71,6)= $diskResize
                     $buildData.Cells.Item(71,7)= $task_array
+
+                    <# AWS-SPECIFIC VARIABLES #>
+                    $buildData.Cells.Item(71,8)= $instanceSize
+                    $buildData.Cells.Item(71,9)= $availabilityZone
+                    $buildData.Cells.Item(71,10)= $ipAddress
+                    $buildData.Cells.Item(71,11)= $instanceID
                 }
         
                 $webServerCount++
@@ -1253,36 +1602,54 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
             #######################
             # SANDBOX SAS SERVER 
             #######################
-            elseif ($environmentsMaster[$x][$y][0].Name.Substring(($environmentsMaster[$x][$y][0].Name.Length - 5), 3) -eq "sas") {
+            elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "sas") {
                 Write-Host "THIS IS THE SANDBOX SAS SERVER" -ForegroundColor Cyan
         
                 <# CPU/RAM #>
                 Write-Host "Server CPU and RAM" -ForegroundColor Red
-                Write-Host "Server Name: $($environmentsMaster[$x][$y][0].Name)"
-                Write-Host "Server CPUs: $($environmentsMaster[$x][$y][0].NumCpu)"
-                Write-Host "Server RAM: $($environmentsMaster[$x][$y][0].MemoryGB)"
+                Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
+                Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
         
                 <# HARDDRIVES #>
                 Write-Host "Disks and Disk Capacity" -ForegroundColor Red
                 $diskResize = "Yes"
                 $hdStringArray = ""
-                foreach ($hd in $environmentsMaster[$x][$y][1]) {
-                    $hdString = "$($hd.Name): $($hd.CapacityGB)gb"
+                foreach ($hd in $environmentsMaster[$x][$y][2][0]) {
+                    $hdString = "$($hd.DeviceID) $([MATH]::Round($hd.Size / 1GB,2))gb"
                     $hdStringArray += "$($hdString)`n"
                     Write-Host $hdString  
-                    if ($hd.CapacityGB -gt 60) {
+                    if (([MATH]::Round($hd.Size / 1GB,2)) -gt 60) {
                         $diskResize = "No"  
                     }
                 }
                 Write-Host "Standard Size Disks (less than 60GB): $($diskResize)"
         
-                <# CLUSTER #>
-                # Write-Host "Server Cluster" -ForegroundColor Red
-                # Write-Host "Cluster Name: $($server[2].Name)"
+                <# AWS METADATA #>
+
+                        # INSTANCE SIZE #
+                        Write-Host "Instance Size" -ForegroundColor Red
+                        $instanceSize = $environmentsMaster[$x][$y][1][2]
+                        Write-Host $instanceSize
+                        
+                        # AVAILABILITY ZONE #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $availabilityZone = $environmentsMaster[$x][$y][1][3]
+                        Write-Host $availabilityZone
+
+                        # IP ADDRESS #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $ipAddress = $environmentsMaster[$x][$y][1][4]
+                        Write-Host $ipAddress
+
+                        # INSTANCE ID #
+                        Write-Host "Instance ID" -ForegroundColor Red
+                        $instanceID = $environmentsMaster[$x][$y][1][0]
+                        Write-Host $instanceID
         
                 <# SCHEDULED TASKS #>
                 Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][0].Name -ScriptBlock {
+                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
                     Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                 } -Credential $credentials
 
@@ -1293,12 +1660,18 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 }
                 
                 <# EXCEL LOGIC AND VARIABLES#>
-                $buildData.Cells.Item(75,2)= "$($environmentsMaster[$x][$y][0].Name)"
-                $buildData.Cells.Item(75,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                $buildData.Cells.Item(75,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                $buildData.Cells.Item(75,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                $buildData.Cells.Item(75,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                $buildData.Cells.Item(75,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                 $buildData.Cells.Item(75,5)= $hdStringArray
                 $buildData.Cells.Item(75,6)= $diskResize
                 $buildData.Cells.Item(75,7)= $task_array
+
+                <# AWS-SPECIFIC VARIABLES #>
+                $buildData.Cells.Item(75,8)= $instanceSize
+                $buildData.Cells.Item(75,9)= $availabilityZone
+                $buildData.Cells.Item(75,10)= $ipAddress
+                $buildData.Cells.Item(75,11)= $instanceID
         
                 Write-Host "`n" -ForegroundColor Red  
             }
@@ -1306,36 +1679,54 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
             #######################
             # SANDBOX SQL SERVER 
             #######################
-            elseif ($environmentsMaster[$x][$y][0].Name.Substring(($environmentsMaster[$x][$y][0].Name.Length - 5), 3) -eq "sql") {
+            elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "sql") {
                 Write-Host "THIS IS THE SANDBOX SQL SERVER" -ForegroundColor Cyan
         
                 <# CPU/RAM #>
                 Write-Host "Server CPU and RAM" -ForegroundColor Red
-                Write-Host "Server Name: $($environmentsMaster[$x][$y][0].Name)"
-                Write-Host "Server CPUs: $($environmentsMaster[$x][$y][0].NumCpu)"
-                Write-Host "Server RAM: $($environmentsMaster[$x][$y][0].MemoryGB)"
+                Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
+                Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
         
                 <# HARDDRIVES #>
                 Write-Host "Disks and Disk Capacity" -ForegroundColor Red
                 $diskResize = "Yes"
                 $hdStringArray = ""
-                foreach ($hd in $environmentsMaster[$x][$y][1]) {
-                    $hdString = "$($hd.Name): $($hd.CapacityGB)gb"
+                foreach ($hd in $environmentsMaster[$x][$y][2][0]) {
+                    $hdString = "$($hd.DeviceID) $([MATH]::Round($hd.Size / 1GB,2))gb"
                     $hdStringArray += "$($hdString)`n"
                     Write-Host $hdString  
-                    if ($hd.CapacityGB -gt 60) {
+                    if (([MATH]::Round($hd.Size / 1GB,2)) -gt 60) {
                         $diskResize = "No"  
                     }
                 }
                 Write-Host "Standard Size Disks (less than 60GB): $($diskResize)"
         
-                <# CLUSTER #>
-                # Write-Host "Server Cluster" -ForegroundColor Red
-                # Write-Host "Cluster Name: $($server[2].Name)"
+                <# AWS METADATA #>
+
+                        # INSTANCE SIZE #
+                        Write-Host "Instance Size" -ForegroundColor Red
+                        $instanceSize = $environmentsMaster[$x][$y][1][2]
+                        Write-Host $instanceSize
+                        
+                        # AVAILABILITY ZONE #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $availabilityZone = $environmentsMaster[$x][$y][1][3]
+                        Write-Host $availabilityZone
+
+                        # IP ADDRESS #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $ipAddress = $environmentsMaster[$x][$y][1][4]
+                        Write-Host $ipAddress
+
+                        # INSTANCE ID #
+                        Write-Host "Instance ID" -ForegroundColor Red
+                        $instanceID = $environmentsMaster[$x][$y][1][0]
+                        Write-Host $instanceID
         
                 <# SCHEDULED TASKS #>
                 Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][0].Name -ScriptBlock {
+                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
                     Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                 } -Credential $credentials
 
@@ -1344,10 +1735,15 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     Write-Host "Task Name: $($task.TaskName)"
                     $task_array += "$($task.TaskName)`n"
                 }
+
+                <# MAINTENANCE DAY #>
+                Write-Host "Maintenance Day" -ForegroundColor Red
+                $maintenanceDay = $environmentsMaster[$x][$y][0][4].Value
+                Write-Host $maintenanceDay
                 
                 <# DATABASE PROPERTIES #>
                 Write-Host "Database Properties" -ForegroundColor Red
-                $sqlSession = New-PSSession -ComputerName $environmentsMaster[$x][$y][0].Name -Credential $credentials
+                $sqlSession = New-PSSession -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials
                     
                     # ALL DATABASES (NAMES AND SIZES in MB)
                     $mainDatabase = ""
@@ -1361,7 +1757,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         WHERE d.database_id > 4 -- Skip system databases
                         GROUP BY d.name
                         ORDER BY d.name" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][0].Name, $mainDatabase
+                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase
                     foreach ($database in $all_databases) {
                         Write-Host "$($database.name) ---- $($database.Size_MB) MB"
                         if (($database.name -like "*SANDBOX1") -or ($database.name -like "*DEV*")) {
@@ -1378,7 +1774,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         param ($server)
                         Invoke-Sqlcmd -Query "SELECT name, value, [description] FROM sys.configurations WHERE name like
                         '%parallel%' ORDER BY name OPTION (RECOMPILE);" -ServerInstance $server.Name
-                    } -ArgumentList $environmentsMaster[$x][$y][0].Name
+                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName
                     $maxdop = $database_maxdop_threshold | Where-Object {$_.name -like "cost*"} | Select-Object -property value
                     $cost_threshold = $database_maxdop_threshold | Where-Object {$_.name -like "max*"} | Select-Object -property value
                     Write-Host "Max DOP --- $($maxdop.value) MB"
@@ -1390,7 +1786,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         param ($server)
                         Invoke-Sqlcmd -Query "SELECT name, value, [description] FROM sys.configurations WHERE name like
                         '%server memory%' ORDER BY name OPTION (RECOMPILE);" -ServerInstance $server.Name
-                    } -ArgumentList $environmentsMaster[$x][$y][0].Name 
+                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName 
                     $database_memory_max = $database_memory | where-Object {$_.name -like "max*"} | Select-Object -property value
                     $database_memory_min = $database_memory | where-Object {$_.name -like "min*"} | Select-Object -property value
                     Write-Host "Max Server Memory --- $($database_memory_max.value) MB"
@@ -1408,7 +1804,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         LEFT OUTER JOIN sys.dm_database_encryption_keys dm
                             ON db.database_id = dm.database_id;
                         GO" -ServerInstance $server 
-                    } -ArgumentList $environmentsMaster[$x][$y][0].Name
+                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName
                     $dbEncryption = $database_encryption | Where-Object {$_.name -eq $mainDatabase}
                     Write-Host "$($dbEncryption.name) --- $($dbEncryption.is_encrypted)"
 
@@ -1420,7 +1816,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         GO
                         exec sp_spaceused
                         GO" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][0].Name, $mainDatabase
+                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase
                     Write-Host "$($database_dbSize.database_name) --- $($database_dbSize.database_size)"
         
                     # CUSTOM MODELS
@@ -1432,7 +1828,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         WHERE bism_ind ='N' 
                         AND olap_obj_name 
                         NOT like 'PVE%'" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][0].Name, $mainDatabase | Select-Object -property olap_obj_name
+                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase | Select-Object -property olap_obj_name
                     foreach ($model in $database_custom_models.olap_obj_name) {
                         Write-Host $model
                     }  
@@ -1469,7 +1865,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         j.job_id,
                         p.name,
                         p.param_value;" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][0].Name, $mainDatabase
+                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase
                     $database_interfaces.ParamValue  
                     
                     # LICENSE COUNT
@@ -1500,7 +1896,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         LicenseRole,
                         LicenseCode,
                         r.seats" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][0].Name, $mainDatabase
+                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase
                     $licenseProperties = $database_license_count | Select-Object -Property LicenseRole,LicenseCount
                     $totalLicenseCount = 0
                     foreach ($license in $licenseProperties){
@@ -1517,21 +1913,27 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         FROM ip.pv_version 
                         WHERE release = 'PROGRESSING_WEB'
                         ORDER BY seq DESC;" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][0].Name, $mainDatabase
+                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase
                     $database_progressing_web_version.sub_release
         
                 <# EXCEL LOGIC AND VARIABLES#>
-                $buildData.Cells.Item(12,2)= $environmentsMaster[$x][$y][0].Name.Substring(($environmentsMaster[$x][$y][0].Name.Length - 2), 2)
+                $buildData.Cells.Item(12,2)= $environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 2), 2)
                 $buildData.Cells.Item(44,3)= $database_dbSize.database_size
                 $buildData.Cells.Item(43,3)= $database_memory_max.value
                 $buildData.Cells.Item(42,3)= $database_memory_min.value
         
-                $buildData.Cells.Item(74,2)= "$($environmentsMaster[$x][$y][0].Name)"
-                $buildData.Cells.Item(74,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                $buildData.Cells.Item(74,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                $buildData.Cells.Item(74,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                $buildData.Cells.Item(74,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                $buildData.Cells.Item(74,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                 $buildData.Cells.Item(74,5)= $hdStringArray
                 $buildData.Cells.Item(74,6)= $diskResize
                 $buildData.Cells.Item(74,7)= $task_array
+
+                <# AWS-SPECIFIC VARIABLES #>
+                $buildData.Cells.Item(74,8)= $instanceSize
+                $buildData.Cells.Item(74,9)= $availabilityZone
+                $buildData.Cells.Item(74,10)= $ipAddress
+                $buildData.Cells.Item(74,11)= $instanceID
                 
                 $buildData.Cells.Item(26,3)= $database_progressing_web_version.sub_release
         
@@ -1545,7 +1947,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 $databaseCount = 0
                 foreach ($database in $all_databases) {
                     $buildData.Cells.Item(101, (2 + $databaseCount))= $database.name
-                    $buildData.Cells.Item(102, (2 + $databaseCount))= "Size: $($database.Size_MB) MB"
+                    $buildData.Cells.Item(102, (2 + $databaseCount))= $database.Size_MB
                     $databaseCount++
                 }
         
@@ -1560,6 +1962,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 $buildData.Cells.Item(22,3)= $totalLicenseCount
                 $buildData.Cells.Item(40,3)= $cost_threshold.value
                 $buildData.Cells.Item(39,3)= $maxdop.value
+                $buildData.Cells.Item(105,3)= $maintenanceDay
         
                 Remove-PSSession -Session $sqlSession
         
@@ -1569,36 +1972,54 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
             #######################
             # SANDBOX PVE SERVER 
             #######################
-            elseif ($environmentsMaster[$x][$y][0].Name.Substring(($environmentsMaster[$x][$y][0].Name.Length - 5), 3) -eq "pve") {
+            elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "pve") {
                 Write-Host "THIS IS THE SANDBOX PVE SERVER" -ForegroundColor Cyan
         
                 <# CPU/RAM #>
                 Write-Host "Server CPU and RAM" -ForegroundColor Red
-                Write-Host "Server Name: $($environmentsMaster[$x][$y][0].Name)"
-                Write-Host "Server CPUs: $($environmentsMaster[$x][$y][0].NumCpu)"
-                Write-Host "Server RAM: $($environmentsMaster[$x][$y][0].MemoryGB)"  
+                Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
+                Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"  
         
                 <# HARDDRIVES #>
                 Write-Host "Disks and Disk Capacity" -ForegroundColor Red
                 $diskResize = "Yes"
                 $hdStringArray = ""
-                foreach ($hd in $environmentsMaster[$x][$y][1]) {
-                    $hdString = "$($hd.Name): $($hd.CapacityGB)gb"
+                foreach ($hd in $environmentsMaster[$x][$y][2][0]) {
+                    $hdString = "$($hd.DeviceID) $([MATH]::Round($hd.Size / 1GB,2))gb"
                     $hdStringArray += "$($hdString)`n"
                     Write-Host $hdString  
-                    if ($hd.CapacityGB -gt 60) {
+                    if (([MATH]::Round($hd.Size / 1GB,2)) -gt 60) {
                         $diskResize = "No"  
                     }
                 }
                 Write-Host "Standard Size Disks (less than 60GB): $($diskResize)"
         
-                <# CLUSTER #>
-                # Write-Host "Server Cluster" -ForegroundColor Red
-                # Write-Host "Cluster Name: $($server[2].Name)"
+                <# AWS METADATA #>
+
+                        # INSTANCE SIZE #
+                        Write-Host "Instance Size" -ForegroundColor Red
+                        $instanceSize = $environmentsMaster[$x][$y][1][2]
+                        Write-Host $instanceSize
+                        
+                        # AVAILABILITY ZONE #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $availabilityZone = $environmentsMaster[$x][$y][1][3]
+                        Write-Host $availabilityZone
+
+                        # IP ADDRESS #
+                        Write-Host "Availability Zone" -ForegroundColor Red
+                        $ipAddress = $environmentsMaster[$x][$y][1][4]
+                        Write-Host $ipAddress
+
+                        # INSTANCE ID #
+                        Write-Host "Instance ID" -ForegroundColor Red
+                        $instanceID = $environmentsMaster[$x][$y][1][0]
+                        Write-Host $instanceID
         
                 <# SCHEDULED TASKS #>
                 Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][0].Name -ScriptBlock {
+                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
                     Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                 } -Credential $credentials
 
@@ -1610,7 +2031,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
         
                 <# CURRENT VERSION #>
                 Write-Host "Current Environment Version" -ForegroundColor Red
-                $crVersion = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0].Name)" -Credential $credentials -ScriptBlock {
+                $crVersion = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
                     Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\WebServerPlatform"
                 }
                 Write-Host $crVersion.CrVersion
@@ -1622,7 +2043,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 
                 <# OPEN SUITE #>
                 Write-Host "OpenSuite" -ForegroundColor Red
-                $opensuite = Invoke-Command -ComputerName $environmentsMaster[$x][$y][0].Name -Credential $credentials -ScriptBlock {
+                $opensuite = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
                     if ((Test-Path -Path "C:\ProgramData\Actian" -PathType Container) -And (Test-Path -Path "F:\Planview\Interfaces\OpenSuite" -PathType Container)) {
         
                         $software = "*Actian*";
@@ -1638,57 +2059,91 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 }
                 Write-Host "OpenSuite Detected: $($opensuite)"
         
-                <# INTEGRATIONS #>
-                Write-Host "Integrations" -ForegroundColor Red
-                    $PPAdapter = "False"
-                    $PRMAdapter = "False"
+                <# CONNECTORS #>
+                Write-Host "Connectors" -ForegroundColor Red
+                $PRMAdapter = "False"
+                $PPAdapter = "False"
+                $LKAdapter = "False"
 
-                    $integrations = Invoke-Command -ComputerName $environmentsMaster[$x][$y][0].Name -Credential $credentials -ScriptBlock {
-                        if (Test-Path -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\Integrations\*") {
+                $PRMini = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
 
-                            $databaseNames = Get-ChildItem -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\Integrations\*" -Name 
-        
-                            $mainDatabase = ""
-                            foreach ($db in $databaseNames) {
-                                if (($db -like "*SANDBOX1") -or ($db -like "*TEST*")) {
-                                    $mainDatabase = $db
-                                }
-                            }
+                    if (Test-Path -Path "F:\Planview\midtier\webserver\objects\PRM_Adapter_Config.ini" -PathType leaf){
 
-                            Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\Integrations\$($mainDatabase)\*" | Select-Object -Property PSChildName
-                        
-                        } else {
-                            return 0
+                        $PRMiniContent = (Get-Content -Path "F:\Planview\midtier\webserver\objects\PRM_Adapter_Config.ini" | Where-Object {$_.length -ne 0}) | Where-Object {$_.substring(0,1) -ne ";"}
+
+                        $masterArray = @()
+                        $databaseName = ""
+                        foreach($x in $PRMiniContent){
+
+                            $valuePair = New-Object PSObject
+                            Add-Member -InputObject $valuePair -MemberType NoteProperty -Name Database -Value ""
+                            Add-Member -InputObject $valuePair -MemberType NoteProperty -Name Key -Value ""
+
+                            if ($x -match "^\["){
+
+                                $databaseName = $x.substring(1, ($x.length - 2)) 
+
+                                $valuePair.Database = $databaseName
+                                $valuePair.Key = $databaseName
+                                $masterArray += $valuePair
+                            
+                            
+                            } else {       
+                            
+                                $valuePair.Database = $databaseName
+                                $valuePair.Key = $x 
+                                $masterArray += $valuePair
+                            
+                            }           
                         }
-                    }
-
                     
-                    if ($integrations -eq 0) {
-
-                        Write-Host "No integrations found in 'HKLM:\SOFTWARE\WOW6432Node\Planview\Integrations'"
-
+                        return $masterArray
+                    
                     } else {
 
-                        Write-Host "Number of integrations found: $($integrations.PSChildName.Count)"
-                        
-                    <#     foreach ($x in $integrations.PSChildName) {
-                           if ($x -like "*ProjectPlace*") {
-                                Write-Host "PP ADAPTER FOUND: $($x)"
-                                $PPAdapter = "True"
-                            }
-                            elseif ($x -like "*PRM_Adapter*") {
-                                Write-Host "PRM ADAPTER FOUND: $($x)"
-                                $PRMAdapter= "True"
-                            } else {
-                                Write-Host "Other Integration Identified: $($x)"
-                            }  
-                        } #>
+                        return 0
 
                     }
+                }
+
+                if ($PRMini -ne '0'){
+
+                    $PRMAdapter = "True"
+
+                    Write-Host "PRM Adapter Found"
+                    $LKKey = ($PRMini | Where-Object {$_.Database -like "*SANDBOX*"} | Where-Object {$_.Key -like "use_prm_leankit*"}).Key
+                    $PPKey = ($PRMini | Where-Object {$_.Database -like "*SANDBOX*"} | Where-Object {$_.Key -like "use_prm_projectplace*"}).Key
+
+                    if ($LKKey -like "*true*"){
+                        $LKAdapter = "True"
+                        Write-Host "LeanKit Connector --- True"
+                    } else {
+                        Write-Host "LeanKit Connector --- False"
+                    }
+
+                    if ($PPKey -like "*true*"){
+                        $PPAdapter = "True"
+                        Write-Host "ProjectPlace Connector --- True"
+                    } else {
+                        Write-Host "ProjectPlace Connector --- False"
+                    }
+
+                } else {
+
+                    Write-Host "PRM Adapter not found"
+
+                    $LegacyPPAdapter = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
+                        Test-Path -Path "F:\Planview\midtier\webserver\objects\ProjectPlace_Config.ini" -PathType leaf
+                    }
+
+                    $PPAdapter = $LegacyPPAdapter
+                    Write-Host "ProjectPlace (Legacy install) --- $($PPAdapter)"
+
+                }
         
                 # NEW RELIC #
                 Write-Host "New Relic" -ForegroundColor Red
-                $newRelic = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0].Name)" -Credential $credentials -ScriptBlock {
+                $newRelic = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
                     if (Test-Path -Path "C:\ProgramData\New Relic" -PathType Container ) {
                         Write-Host "New Relic has been detected on this server"
                         return "Yes"
@@ -1699,7 +2154,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 }
         
                     # GET WEB CONFIG #
-                    $webConfig = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0].Name)" -Credential $credentials -ScriptBlock {
+                    $webConfig = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
                         return Get-Content -Path "F:\Planview\MidTier\ODataService\Web.config"
                     }
                     $webConfig = [xml] $webConfig
@@ -1721,8 +2176,9 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
         
                 <# IP RESTRICTIONS #>
                 Write-Host "IP Restrictions on F5" -ForegroundColor Red
-                $IPRestrictions = "No"
-                    
+                Write-Host "Currently Not Automated"
+                $IPRestrictions = "Not Automated"
+<#                    
                     # Authentication on the F5 #
                     $websession =  New-Object Microsoft.PowerShell.Commands.WebRequestSession
                     $jsonbody = @{username = $f5Credentials.UserName ; password = $f5Credentials.GetNetworkCredential().Password; loginProviderName='tmos'} | ConvertTo-Json
@@ -1744,7 +2200,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     if ($IPRestrictions -eq "No") {
                         Write-Host "No IP restrictions found for $($dnsAlias).pvcloud.com"
                     }
-                
+#>                
                 <# EXCEL LOGIC AND VARIABLES#>
                 $webServerCount++
                 $buildData.Cells.Item(24,3)= $webServerCount
@@ -1755,14 +2211,21 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 $buildData.Cells.Item(25,3)= $crVersion.CrVersion
                 $buildData.Cells.Item(19,2)= "True"
         
-                $buildData.Cells.Item(76,2)= "$($environmentsMaster[$x][$y][0].Name)"
-                $buildData.Cells.Item(76,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                $buildData.Cells.Item(76,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                $buildData.Cells.Item(76,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                $buildData.Cells.Item(76,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                $buildData.Cells.Item(76,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                 $buildData.Cells.Item(76,5)= $hdStringArray
                 $buildData.Cells.Item(76,6)= $diskResize
                 $buildData.Cells.Item(76,7)= $task_array
+
+                <# AWS-SPECIFIC VARIABLES #>
+                $buildData.Cells.Item(76,8)= $instanceSize
+                $buildData.Cells.Item(76,9)= $availabilityZone
+                $buildData.Cells.Item(76,10)= $ipAddress
+                $buildData.Cells.Item(76,11)= $instanceID
         
                 $buildData.Cells.Item(31,3)= $PPAdapter
+                $buildData.Cells.Item(32,3)= $LKAdapter
                 $buildData.Cells.Item(37,3)= $PRMAdapter
         
                 Write-Host "`n" -ForegroundColor Red  
