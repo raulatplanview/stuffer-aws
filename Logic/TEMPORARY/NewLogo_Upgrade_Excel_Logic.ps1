@@ -19,10 +19,10 @@ $buildData.Cells.Item(24,2)= "False"
 $buildData.Cells.Item(25,2)= "False"
 
 # PRODUCTION SERVER COUNT #
-$buildData.Cells.Item(23,2)= ($productionComputers.Count - 1)
+$buildData.Cells.Item(29,2)= ($productionComputers.Count - 1)
 
 # SANDBOX SERVER COUNT #
-#$buildData.Cells.Item(23,3)= ($sandboxComputers.Count - 1) 
+$buildData.Cells.Item(29,3)= ($sandboxComputers.Count - 1) 
 
 # CUSTOMER CODE #
 #$buildData.Cells.Item(16,2)= $customerCode.ToUpper()
