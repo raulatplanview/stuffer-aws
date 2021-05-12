@@ -211,8 +211,8 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                     <# EXCEL LOGIC AND VARIABLES#>
                     $buildData.Cells.Item(58,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
-                    $buildData.Cells.Item(58,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                    $buildData.Cells.Item(58,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                    $buildData.Cells.Item(58,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                    $buildData.Cells.Item(58,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(58,5)= $hdStringArray
                     $buildData.Cells.Item(58,6)= $diskResize
                     $buildData.Cells.Item(58,7)= $task_array
@@ -294,8 +294,8 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                     <# EXCEL LOGIC AND VARIABLES#>
                     $buildData.Cells.Item(59,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
-                    $buildData.Cells.Item(59,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                    $buildData.Cells.Item(59,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                    $buildData.Cells.Item(59,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                    $buildData.Cells.Item(59,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(59,5)= $hdStringArray
                     $buildData.Cells.Item(59,6)= $diskResize
                     $buildData.Cells.Item(59,7)= $task_array
@@ -466,8 +466,8 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                 if ($webServerCount -gt 0){
                     $buildData.Cells.Item(64 + ($webServerCount - 1),2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
-                    $buildData.Cells.Item(64 + ($webServerCount - 1),3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                    $buildData.Cells.Item(64 + ($webServerCount - 1),4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                    $buildData.Cells.Item(64 + ($webServerCount - 1),3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                    $buildData.Cells.Item(64 + ($webServerCount - 1),4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(64 + ($webServerCount - 1),5)= $hdStringArray
                     $buildData.Cells.Item(64 + ($webServerCount - 1),6)= $diskResize
                     $buildData.Cells.Item(64 + ($webServerCount - 1),7)= $task_array
@@ -480,8 +480,8 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 }
                 else {
                     $buildData.Cells.Item(57,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
-                    $buildData.Cells.Item(57,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                    $buildData.Cells.Item(57,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                    $buildData.Cells.Item(57,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                    $buildData.Cells.Item(57,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(57,5)= $hdStringArray
                     $buildData.Cells.Item(57,6)= $diskResize
                     $buildData.Cells.Item(57,7)= $task_array
@@ -563,8 +563,8 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 
                 <# EXCEL LOGIC AND VARIABLES#>
                 $buildData.Cells.Item(61,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
-                $buildData.Cells.Item(61,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                $buildData.Cells.Item(61,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                $buildData.Cells.Item(61,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                $buildData.Cells.Item(61,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                 $buildData.Cells.Item(61,5)= $hdStringArray
                 $buildData.Cells.Item(61,6)= $diskResize
                 $buildData.Cells.Item(61,7)= $task_array
@@ -825,8 +825,8 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 $buildData.Cells.Item(48,2)= $database_memory_min.value
 
                 $buildData.Cells.Item(60,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
-                $buildData.Cells.Item(60,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                $buildData.Cells.Item(60,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                $buildData.Cells.Item(60,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                $buildData.Cells.Item(60,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                 $buildData.Cells.Item(60,5)= $hdStringArray
                 $buildData.Cells.Item(60,6)= $diskResize
                 $buildData.Cells.Item(60,7)= $task_array
@@ -1136,8 +1136,8 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
             
 
                 $buildData.Cells.Item(62,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
-                $buildData.Cells.Item(62,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                $buildData.Cells.Item(62,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                $buildData.Cells.Item(62,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                $buildData.Cells.Item(62,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                 $buildData.Cells.Item(62,5)= $hdStringArray
                 $buildData.Cells.Item(62,6)= $diskResize
                 $buildData.Cells.Item(62,7)= $task_array
@@ -1325,8 +1325,8 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     
                     <# EXCEL LOGIC AND VARIABLES#>
                     $buildData.Cells.Item(78,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
-                    $buildData.Cells.Item(78,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                    $buildData.Cells.Item(78,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                    $buildData.Cells.Item(78,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                    $buildData.Cells.Item(78,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(78,5)= $hdStringArray
                     $buildData.Cells.Item(78,6)= $diskResize
                     $buildData.Cells.Item(78,7)= $task_array
@@ -1408,8 +1408,8 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     
                     <# EXCEL LOGIC AND VARIABLES#>
                     $buildData.Cells.Item(79,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
-                    $buildData.Cells.Item(79,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                    $buildData.Cells.Item(79,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                    $buildData.Cells.Item(79,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                    $buildData.Cells.Item(79,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(79,5)= $hdStringArray
                     $buildData.Cells.Item(79,6)= $diskResize
                     $buildData.Cells.Item(79,7)= $task_array
@@ -1565,8 +1565,8 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
         
                 if ($webServerCount -gt 0){
                     $buildData.Cells.Item(84 + ($webServerCount - 1),2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
-                    $buildData.Cells.Item(84 + ($webServerCount - 1),3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                    $buildData.Cells.Item(84 + ($webServerCount - 1),4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                    $buildData.Cells.Item(84 + ($webServerCount - 1),3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                    $buildData.Cells.Item(84 + ($webServerCount - 1),4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(84 + ($webServerCount - 1),5)= $hdStringArray
                     $buildData.Cells.Item(84 + ($webServerCount - 1),6)= $diskResize
                     $buildData.Cells.Item(84 + ($webServerCount - 1),7)= $task_array
@@ -1579,8 +1579,8 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 }
                 else {
                     $buildData.Cells.Item(77,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
-                    $buildData.Cells.Item(77,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                    $buildData.Cells.Item(77,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                    $buildData.Cells.Item(77,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                    $buildData.Cells.Item(77,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(77,5)= $hdStringArray
                     $buildData.Cells.Item(77,6)= $diskResize
                     $buildData.Cells.Item(77,7)= $task_array
@@ -1661,8 +1661,8 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 
                 <# EXCEL LOGIC AND VARIABLES#>
                 $buildData.Cells.Item(81,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
-                $buildData.Cells.Item(81,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                $buildData.Cells.Item(81,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                $buildData.Cells.Item(81,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                $buildData.Cells.Item(81,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                 $buildData.Cells.Item(81,5)= $hdStringArray
                 $buildData.Cells.Item(81,6)= $diskResize
                 $buildData.Cells.Item(81,7)= $task_array
@@ -1924,8 +1924,8 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 
         
                 $buildData.Cells.Item(80,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
-                $buildData.Cells.Item(80,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                $buildData.Cells.Item(80,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                $buildData.Cells.Item(80,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                $buildData.Cells.Item(80,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                 $buildData.Cells.Item(80,5)= $hdStringArray
                 $buildData.Cells.Item(80,6)= $diskResize
                 $buildData.Cells.Item(80,7)= $task_array
@@ -2214,8 +2214,8 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 $buildData.Cells.Item(25,2)= "True"
         
                 $buildData.Cells.Item(82,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
-                $buildData.Cells.Item(82,3)= "$($environmentsMaster[$x][$y][0].NumCpu)"
-                $buildData.Cells.Item(82,4)= "$($environmentsMaster[$x][$y][0].MemoryGB)"
+                $buildData.Cells.Item(82,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
+                $buildData.Cells.Item(82,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                 $buildData.Cells.Item(82,5)= $hdStringArray
                 $buildData.Cells.Item(82,6)= $diskResize
                 $buildData.Cells.Item(82,7)= $task_array
