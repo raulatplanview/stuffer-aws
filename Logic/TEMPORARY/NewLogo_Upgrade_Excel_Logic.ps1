@@ -235,7 +235,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 ##################################
                 # PRODUCTION CTM SERVER (Troux) 
                 ##################################
-                elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(3, 1) -eq 't') {
+                elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "ctm") {
                     Write-Host "THIS IS THE PRODUCTION TROUX SERVER" -ForegroundColor Cyan
 
                     <# CPU/RAM #>
@@ -1349,7 +1349,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 ###############################
                 # SANDBOX CTM SERVER (Troux) 
                 ###############################
-                elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(3, 1) -eq 't') {
+                elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "ctm") {
                     Write-Host "THIS IS THE SANDBOX TROUX SERVER" -ForegroundColor Cyan
         
                     <# CPU/RAM #>
