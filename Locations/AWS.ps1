@@ -136,7 +136,7 @@ foreach ($server in $servers) {
 Write-Host "Total number of active Production servers identified: $($productionComputers.Count - 1)" -ForegroundColor yellow
 Write-Host "Total number of active Sandbox servers identified: $($sandboxComputers.Count - 1)" -ForegroundColor yellow
 Write-Host "Total number of active non-Production or non-Sandbox servers identified: $($undeclaredServers.Count)" -ForegroundColor yellow
-$productionComputers
+
 <# CREATE MASTER ENVIRONMENT ARRAY #>
 $environmentsMaster = @($productionComputers, $sandboxComputers)
 

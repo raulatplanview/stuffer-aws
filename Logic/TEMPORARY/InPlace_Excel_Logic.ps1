@@ -35,7 +35,7 @@ $AD_OU = $environmentsMaster[0][1][0][2].Value
 $buildData.Cells.Item(14,2)= $AD_OU
 
 # SAASINFO LINK #
-#$buildData.Cells.Item(3,2)= "http://saasinfo.planview.world/$($customerName.Split(':')[0]).htm"
+$buildData.Cells.Item(3,2)= "N/A"
 
 <# MAIN LOOP #>
 for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
@@ -87,7 +87,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         Write-Host $availabilityZone
 
                         # IP ADDRESS #
-                        Write-Host "Availability Zone" -ForegroundColor Red
+                        Write-Host "IP Address" -ForegroundColor Red
                         $ipAddress = $environmentsMaster[$x][$y][1][4]
                         Write-Host $ipAddress
 
@@ -271,7 +271,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         Write-Host $availabilityZone
 
                         # IP ADDRESS #
-                        Write-Host "Availability Zone" -ForegroundColor Red
+                        Write-Host "IP Address" -ForegroundColor Red
                         $ipAddress = $environmentsMaster[$x][$y][1][4]
                         Write-Host $ipAddress
 
@@ -350,7 +350,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         Write-Host $availabilityZone
 
                         # IP ADDRESS #
-                        Write-Host "Availability Zone" -ForegroundColor Red
+                        Write-Host "IP Address" -ForegroundColor Red
                         $ipAddress = $environmentsMaster[$x][$y][1][4]
                         Write-Host $ipAddress
 
@@ -540,7 +540,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         Write-Host $availabilityZone
 
                         # IP ADDRESS #
-                        Write-Host "Availability Zone" -ForegroundColor Red
+                        Write-Host "IP Address" -ForegroundColor Red
                         $ipAddress = $environmentsMaster[$x][$y][1][4]
                         Write-Host $ipAddress
 
@@ -617,7 +617,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         Write-Host $availabilityZone
 
                         # IP ADDRESS #
-                        Write-Host "Availability Zone" -ForegroundColor Red
+                        Write-Host "IP Address" -ForegroundColor Red
                         $ipAddress = $environmentsMaster[$x][$y][1][4]
                         Write-Host $ipAddress
 
@@ -910,7 +910,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         Write-Host $availabilityZone
 
                         # IP ADDRESS #
-                        Write-Host "Availability Zone" -ForegroundColor Red
+                        Write-Host "IP Address" -ForegroundColor Red
                         $ipAddress = $environmentsMaster[$x][$y][1][4]
                         Write-Host $ipAddress
 
@@ -1202,7 +1202,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         Write-Host $availabilityZone
 
                         # IP ADDRESS #
-                        Write-Host "Availability Zone" -ForegroundColor Red
+                        Write-Host "IP Address" -ForegroundColor Red
                         $ipAddress = $environmentsMaster[$x][$y][1][4]
                         Write-Host $ipAddress
 
@@ -1385,7 +1385,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         Write-Host $availabilityZone
 
                         # IP ADDRESS #
-                        Write-Host "Availability Zone" -ForegroundColor Red
+                        Write-Host "IP Address" -ForegroundColor Red
                         $ipAddress = $environmentsMaster[$x][$y][1][4]
                         Write-Host $ipAddress
 
@@ -1463,7 +1463,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         Write-Host $availabilityZone
 
                         # IP ADDRESS #
-                        Write-Host "Availability Zone" -ForegroundColor Red
+                        Write-Host "IP Address" -ForegroundColor Red
                         $ipAddress = $environmentsMaster[$x][$y][1][4]
                         Write-Host $ipAddress
 
@@ -1638,7 +1638,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         Write-Host $availabilityZone
 
                         # IP ADDRESS #
-                        Write-Host "Availability Zone" -ForegroundColor Red
+                        Write-Host "IP Address" -ForegroundColor Red
                         $ipAddress = $environmentsMaster[$x][$y][1][4]
                         Write-Host $ipAddress
 
@@ -1715,7 +1715,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         Write-Host $availabilityZone
 
                         # IP ADDRESS #
-                        Write-Host "Availability Zone" -ForegroundColor Red
+                        Write-Host "IP Address" -ForegroundColor Red
                         $ipAddress = $environmentsMaster[$x][$y][1][4]
                         Write-Host $ipAddress
 
@@ -2008,7 +2008,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         Write-Host $availabilityZone
 
                         # IP ADDRESS #
-                        Write-Host "Availability Zone" -ForegroundColor Red
+                        Write-Host "IP Address" -ForegroundColor Red
                         $ipAddress = $environmentsMaster[$x][$y][1][4]
                         Write-Host $ipAddress
 
