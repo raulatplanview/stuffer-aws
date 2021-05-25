@@ -3,8 +3,8 @@ Import-Module SQLSERVER
 Import-Module F5-LTM
 
 <# COPYING EXCEL TEMPLATE #>
-Get-ChildItem -Path "C:\Users\$($awsAdmin)\Planview, Inc\E1 Build Cutover - Documents\Customer Builds\1_FolderTemplate\18" -Filter "NewLogo_Upgrade*" | Copy-Item -Destination "C:\Users\$($awsAdmin)\Desktop"
-$excelFilePath = Get-ChildItem -Path "C:\Users\$($awsAdmin)\Desktop\" -Filter "NewLogo_Upgrade*" | ForEach-Object {$_.FullName}
+Get-ChildItem -Path "C:\Users\$($awsAdmin)\Planview, Inc\E1 Build Cutover - Documents\Customer Builds\1_FolderTemplate\18" -Filter "Cutover*" | Copy-Item -Destination "C:\Users\$($awsAdmin)\Desktop"
+$excelFilePath = Get-ChildItem -Path "C:\Users\$($awsAdmin)\Desktop\" -Filter "Cutover*" | ForEach-Object {$_.FullName}
 
 <# EXCEL OBJECT #>
 $excel = New-Object -ComObject Excel.Application
