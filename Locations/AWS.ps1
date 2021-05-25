@@ -14,6 +14,7 @@ switch($option) {
         $awsRegion = "eu-central-1";
         $reportFarm = "https://pbirsfarm01fr.pvcloud.com/reportserver";
         $f5ip = "10.132.81.2";
+        $domain = ".frankfurt.planviewcloud.net"
         break}
     2 {$jumpbox = "Jumpbox01.sydney.planviewcloud.net"; 
         $ad_server = "WIN-O669CEBVH8N.sydney.planviewcloud.net"; 
@@ -21,6 +22,7 @@ switch($option) {
         $awsRegion = "ap-southeast-2";
         $reportFarm = "https://pbirsfarm03au.pvcloud.com/reportserver";
         $f5ip = "10.132.81.2";
+        $domain = ".sydney.planviewcloud.net"
         break}
 }
 
@@ -60,7 +62,7 @@ foreach ($id in $activeResourceIds){
     $instanceMetadata = @()
     Write-Host "Gathering Instance Metadata..." -ForegroundColor Cyan
     
-    $instanceMetadata = Invoke-Command -ComputerName $serverName.Value -Credential $credentials -ScriptBlock {
+    $instanceMetadata = Invoke-Command -ComputerName "$($serverName.Value)$($domain)" -Credential $credentials -ScriptBlock {
         $metadataArray = @()
 
         $instanceId = Get-EC2InstanceMetadata -Category InstanceId
@@ -80,22 +82,22 @@ foreach ($id in $activeResourceIds){
 
         # HARDDRIVE LOGISTICS: DRIVE LETTER, SIZE (IN BYTES) #
         Write-Host "Gathering HD sizes..." -ForegroundColor Cyan
-        $hdInfo = Invoke-Command -ComputerName $serverName.Value -Credential $credentials -ScriptBlock {get-WmiObject win32_logicaldisk} | Select-Object DeviceID, Size
+        $hdInfo = Invoke-Command -ComputerName "$($serverName.Value)$($domain)" -Credential $credentials -ScriptBlock {get-WmiObject win32_logicaldisk} | Select-Object DeviceID, Size
 
         # RAM LOGISTICS: PHYSICAL MEMORY ARRAY, SIZE (IN BYTES) #
         Write-Host "Gathering RAM sizes..." -ForegroundColor Cyan
-        $ramInfo = Invoke-Command -ComputerName $serverName.Value -Credential $credentials -ScriptBlock {Get-WmiObject win32_PhysicalMemoryArray} | Select-Object MaxCapacity
+        $ramInfo = Invoke-Command -ComputerName "$($serverName.Value)$($domain)" -Credential $credentials -ScriptBlock {Get-WmiObject win32_PhysicalMemoryArray} | Select-Object MaxCapacity
 
         # CPU LOGISTICS: PHYSICAL MEMORY ARRAY, SIZE (IN BYTES) #
         Write-Host "Gathering number of vCPUs..." -ForegroundColor Cyan
-        $cpuInfo = Invoke-Command -ComputerName $serverName.Value -Credential $credentials -ScriptBlock {Get-WmiObject Win32_Processor} | Select-Object DeviceID, Name
+        $cpuInfo = Invoke-Command -ComputerName "$($serverName.Value)$($domain)" -Credential $credentials -ScriptBlock {Get-WmiObject Win32_Processor} | Select-Object DeviceID, Name
 
     $hardwareMetadata = ($hdinfo, $raminfo, $cpuInfo)
     
 
     # SCHEDULED TASKS: TASKS
     Write-Host "Gathering scheduled task information..." -ForegroundColor Cyan
-    $tasks = Invoke-Command -computer $serverName.Value -ScriptBlock {
+    $tasks = Invoke-Command -ComputerName "$($serverName.Value)$($domain)" -ScriptBlock {
         Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
     } -Credential $credentials
 
@@ -133,9 +135,9 @@ foreach ($server in $servers) {
     
 }
 
-Write-Host "Total number of active Production servers identified: $($productionComputers.Count - 1)" -ForegroundColor yellow
+Write-Host "`nTotal number of active Production servers identified: $($productionComputers.Count - 1)" -ForegroundColor yellow
 Write-Host "Total number of active Sandbox servers identified: $($sandboxComputers.Count - 1)" -ForegroundColor yellow
-Write-Host "Total number of active non-Production or non-Sandbox servers identified: $($undeclaredServers.Count)" -ForegroundColor yellow
+Write-Host "Total number of active non-Production or non-Sandbox servers identified: $($undeclaredServers.Count)`n" -ForegroundColor yellow
 
 <# CREATE MASTER ENVIRONMENT ARRAY #>
 $environmentsMaster = @($productionComputers, $sandboxComputers)
@@ -148,11 +150,11 @@ $environmentsMaster[0]
 Write-Host "Environments Master 01" -ForegroundColor Red
 $environmentsMaster[0][1]
 
-Write-Host "Environments Master 01" -ForegroundColor Red
-$environmentsMaster[0][1][0]
+Write-Host "Environments Master 011" -ForegroundColor Red
+$environmentsMaster[0][1][1]
 
-Write-Host "Environments Master 0112" -ForegroundColor Red
-$environmentsMaster[0][1][0][2].Value
+Write-Host "Environments Master 0111" -ForegroundColor Red
+$environmentsMaster[0][1][1][1].PSComputerName
 #>
 
 <# TO 'Logic' #>

@@ -46,17 +46,17 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
         $webServerCount = 0
         for ($y=1; $y -lt $environmentsMaster[$x].Length; $y++) {     
             
-            if ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "app" -or $environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "ctm") {
+            if ($environmentsMaster[$x][$y][0][6].Value.Substring(($environmentsMaster[$x][$y][0][6].Value.Length - 5), 3) -eq "app" -or $environmentsMaster[$x][$y][0][6].Value.Substring(($environmentsMaster[$x][$y][0][6].Value.Length - 5), 3) -eq "ctm") {
             
                 ##########################
                 # PRODUCTION APP SERVER 
                 ##########################
-                if ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "app") {
+                if ($environmentsMaster[$x][$y][0][6].Value.Substring(($environmentsMaster[$x][$y][0][6].Value.Length - 5), 3) -eq "app") {
                     Write-Host "THIS IS THE PRODUCTION APP SERVER" -ForegroundColor Cyan
 
                     <# CPU/RAM #>
                     Write-Host "Server CPU and RAM" -ForegroundColor Red
-                    Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    Write-Host "Server Name: $($environmentsMaster[$x][$y][0][6].Value)"
                     Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
                     Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
 
@@ -98,7 +98,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     
                     <# SCHEDULED TASKS #>
                     Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                    $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
+                    $tasks = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -ScriptBlock {
                         Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                     } -Credential $credentials
 
@@ -110,7 +110,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     
                     <# OPEN SUITE #>
                     Write-Host "OpenSuite" -ForegroundColor Red
-                    $opensuite = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
+                    $opensuite = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
                         if ((Test-Path -Path "C:\ProgramData\Actian" -PathType Container) -And (Test-Path -Path "F:\Planview\Interfaces\OpenSuite" -PathType Container)) {
 
                             $software = "*Actian*";
@@ -132,7 +132,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     $PPAdapter = "False"
                     $LKAdapter = "False"
 
-                    $PRMini = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
+                    $PRMini = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
 
                         if (Test-Path -Path "F:\Planview\midtier\webserver\objects\PRM_Adapter_Config.ini" -PathType leaf){
 
@@ -199,7 +199,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                         Write-Host "PRM Adapter not found"
 
-                        $LegacyPPAdapter = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
+                        $LegacyPPAdapter = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
                             Test-Path -Path "F:\Planview\midtier\webserver\objects\ProjectPlace_Config.ini" -PathType leaf
                         }
 
@@ -210,7 +210,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     
 
                     <# EXCEL LOGIC AND VARIABLES#>
-                    $buildData.Cells.Item(52,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    $buildData.Cells.Item(52,2)= "$($environmentsMaster[$x][$y][0][6].Value)"
                     $buildData.Cells.Item(52,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
                     $buildData.Cells.Item(52,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(52,5)= $hdStringArray
@@ -235,12 +235,12 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 ##################################
                 # PRODUCTION CTM SERVER (Troux) 
                 ##################################
-                elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "ctm") {
+                elseif ($environmentsMaster[$x][$y][0][6].Value.Substring(($environmentsMaster[$x][$y][0][6].Value.Length - 5), 3) -eq "ctm") {
                     Write-Host "THIS IS THE PRODUCTION TROUX SERVER" -ForegroundColor Cyan
 
                     <# CPU/RAM #>
                     Write-Host "Server CPU and RAM" -ForegroundColor Red
-                    Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    Write-Host "Server Name: $($environmentsMaster[$x][$y][0][6].Value)"
                     Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
                     Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"     
 
@@ -282,7 +282,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                     <# SCHEDULED TASKS #>
                     Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                    $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
+                    $tasks = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -ScriptBlock {
                         Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                     } -Credential $credentials
 
@@ -293,7 +293,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     }
 
                     <# EXCEL LOGIC AND VARIABLES#>
-                    $buildData.Cells.Item(53,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    $buildData.Cells.Item(53,2)= "$($environmentsMaster[$x][$y][0][6].Value)"
                     $buildData.Cells.Item(53,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
                     $buildData.Cells.Item(53,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(53,5)= $hdStringArray
@@ -313,13 +313,13 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
             ##########################
             # PRODUCTION WEB SERVER 
             ##########################
-            elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "web") {
+            elseif ($environmentsMaster[$x][$y][0][6].Value.Substring(($environmentsMaster[$x][$y][0][6].Value.Length - 5), 3) -eq "web") {
 
                 Write-Host "THIS IS THE PRODUCTION WEB SERVER" -ForegroundColor Cyan
 
                 <# CPU/RAM #>
                 Write-Host "Server CPU and RAM" -ForegroundColor Red
-                Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                Write-Host "Server Name: $($environmentsMaster[$x][$y][0][6].Value)"
                 Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
                 Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
 
@@ -361,7 +361,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                 <# SCHEDULED TASKS #>
                 Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
+                $tasks = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -ScriptBlock {
                     Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                 } -Credential $credentials
 
@@ -373,7 +373,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                 <# CURRENT VERSION #>
                 Write-Host "Current Environment Version" -ForegroundColor Red
-                $crVersion = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
+                $crVersion = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
                     Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\WebServerPlatform"
                 }
                 Write-Host $crVersion.CrVersion
@@ -385,7 +385,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                 # NEW RELIC #
                 Write-Host "New Relic" -ForegroundColor Red
-                $newRelic = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
+                $newRelic = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
                     if (Test-Path -Path "C:\ProgramData\New Relic" -PathType Container ) {
                         Write-Host "New Relic has been detected on this server"
                         return "Yes"
@@ -396,7 +396,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 }
 
                     # GET WEB CONFIG #
-                    $webConfig = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
+                    $webConfig = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
                         return Get-Content -Path "F:\Planview\MidTier\ODataService\Web.config"
                     }
                     $webConfig = [xml] $webConfig
@@ -465,7 +465,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 $buildData.Cells.Item(15,2)= $newRelic
 
                 if ($webServerCount -gt 0){
-                    $buildData.Cells.Item(58 + ($webServerCount - 1),2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    $buildData.Cells.Item(58 + ($webServerCount - 1),2)= "$($environmentsMaster[$x][$y][0][6].Value)"
                     $buildData.Cells.Item(58 + ($webServerCount - 1),3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
                     $buildData.Cells.Item(58 + ($webServerCount - 1),4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(58 + ($webServerCount - 1),5)= $hdStringArray
@@ -479,7 +479,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     $buildData.Cells.Item(58 + ($webServerCount - 1),11)= $instanceID
                 }
                 else {
-                    $buildData.Cells.Item(51,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    $buildData.Cells.Item(51,2)= "$($environmentsMaster[$x][$y][0][6].Value)"
                     $buildData.Cells.Item(51,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
                     $buildData.Cells.Item(51,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(51,5)= $hdStringArray
@@ -504,12 +504,12 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
             ##########################
             # PRODUCTION SAS SERVER 
             ##########################
-            elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "sas") {
+            elseif ($environmentsMaster[$x][$y][0][6].Value.Substring(($environmentsMaster[$x][$y][0][6].Value.Length - 5), 3) -eq "sas") {
                 Write-Host "THIS IS THE PRODUCTION SAS SERVER" -ForegroundColor Cyan
 
                 <# CPU/RAM #>
                 Write-Host "Server CPU and RAM" -ForegroundColor Red
-                Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                Write-Host "Server Name: $($environmentsMaster[$x][$y][0][6].Value)"
                 Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
                 Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
 
@@ -551,7 +551,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                 <# SCHEDULED TASKS #>
                 Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
+                $tasks = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -ScriptBlock {
                     Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                 } -Credential $credentials
 
@@ -562,7 +562,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 }
                 
                 <# EXCEL LOGIC AND VARIABLES#>
-                $buildData.Cells.Item(55,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                $buildData.Cells.Item(55,2)= "$($environmentsMaster[$x][$y][0][6].Value)"
                 $buildData.Cells.Item(55,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
                 $buildData.Cells.Item(55,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                 $buildData.Cells.Item(55,5)= $hdStringArray
@@ -581,12 +581,12 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
             ##########################
             # PRODUCTION SQL SERVER 
             ##########################
-            elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "sql") {
+            elseif ($environmentsMaster[$x][$y][0][6].Value.Substring(($environmentsMaster[$x][$y][0][6].Value.Length - 5), 3) -eq "sql") {
                 Write-Host "THIS IS THE PRODUCTION SQL SERVER" -ForegroundColor Cyan
 
                 <# CPU/RAM #>
                 Write-Host "Server CPU and RAM" -ForegroundColor Red
-                Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                Write-Host "Server Name: $($environmentsMaster[$x][$y][0][6].Value)"
                 Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
                 Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
 
@@ -628,7 +628,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                 <# SCHEDULED TASKS #>
                 Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
+                $tasks = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -ScriptBlock {
                     Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                 } -Credential $credentials
 
@@ -645,7 +645,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                 <# DATABASE PROPERTIES #>
                 Write-Host "Database Properties" -ForegroundColor Red
-                $sqlSession = New-PSSession -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials
+                $sqlSession = New-PSSession -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials
 
                     # ALL DATABASES (NAMES AND SIZES in MB)
                     $mainDatabase = ""
@@ -659,7 +659,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         WHERE d.database_id > 4 -- Skip system databases
                         GROUP BY d.name
                         ORDER BY d.name" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase
+                    } -ArgumentList $environmentsMaster[$x][$y][0][6].Value, $mainDatabase
                     foreach ($database in $all_databases) {
                         Write-Host "$($database.name) ---- $($database.Size_MB) MB"
                         if (($database.name -like "*PROD") -or ($database.name -like "*DEV*")) {
@@ -676,7 +676,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         param ($server)
                         Invoke-Sqlcmd -Query "SELECT name, value, [description] FROM sys.configurations WHERE name like
                         '%parallel%' ORDER BY name OPTION (RECOMPILE);" -ServerInstance $server.Name
-                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName
+                    } -ArgumentList $environmentsMaster[$x][$y][0][6].Value
                     $maxdop = $database_maxdop_threshold | Where-Object {$_.name -like "cost*"} | Select-Object -property value
                     $cost_threshold = $database_maxdop_threshold | Where-Object {$_.name -like "max*"} | Select-Object -property value
                     Write-Host "Max DOP --- $($maxdop.value) MB"
@@ -688,7 +688,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         param ($server)
                         Invoke-Sqlcmd -Query "SELECT name, value, [description] FROM sys.configurations WHERE name like
                         '%server memory%' ORDER BY name OPTION (RECOMPILE);" -ServerInstance $server.Name
-                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName 
+                    } -ArgumentList $environmentsMaster[$x][$y][0][6].Value 
                     $database_memory_max = $database_memory | where-Object {$_.name -like "max*"} | Select-Object -property value
                     $database_memory_min = $database_memory | where-Object {$_.name -like "min*"} | Select-Object -property value
                     Write-Host "Max Server Memory --- $($database_memory_max.value) MB"
@@ -706,7 +706,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         LEFT OUTER JOIN sys.dm_database_encryption_keys dm
                             ON db.database_id = dm.database_id;
                         GO" -ServerInstance $server 
-                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName
+                    } -ArgumentList $environmentsMaster[$x][$y][0][6].Value
                     $dbEncryption = $database_encryption | Where-Object {$_.name -eq $mainDatabase}
                     Write-Host "$($dbEncryption.name) --- $($dbEncryption.is_encrypted)"
 
@@ -718,7 +718,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         GO
                         exec sp_spaceused
                         GO" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase
+                    } -ArgumentList $environmentsMaster[$x][$y][0][6].Value, $mainDatabase
                     Write-Host "$($database_dbSize.database_name) --- $($database_dbSize.database_size)"
 
                     # CUSTOM MODELS
@@ -730,7 +730,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         WHERE bism_ind ='N' 
                         AND olap_obj_name 
                         NOT like 'PVE%'" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase | Select-Object -property olap_obj_name
+                    } -ArgumentList $environmentsMaster[$x][$y][0][6].Value, $mainDatabase | Select-Object -property olap_obj_name
                     foreach ($model in $database_custom_models.olap_obj_name) {
                         Write-Host $model
                     }          
@@ -767,7 +767,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         j.job_id,
                         p.name,
                         p.param_value;" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase
+                    } -ArgumentList $environmentsMaster[$x][$y][0][6].Value, $mainDatabase
                     $database_interfaces.ParamValue
 
                     # LICENSE COUNT
@@ -798,7 +798,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         LicenseRole,
                         LicenseCode,
                         r.seats" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase
+                    } -ArgumentList $environmentsMaster[$x][$y][0][6].Value, $mainDatabase
                     $licenseProperties = $database_license_count | Select-Object -Property LicenseRole,LicenseCount
                     $totalLicenseCount = 0
                     foreach ($license in $licenseProperties){
@@ -815,16 +815,16 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         FROM ip.pv_version 
                         WHERE release = 'PROGRESSING_WEB'
                         ORDER BY seq DESC;" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase
+                    } -ArgumentList $environmentsMaster[$x][$y][0][6].Value, $mainDatabase
                     $database_progressing_web_version.sub_release 
 
                 <# EXCEL LOGIC AND VARIABLES#>
-                $buildData.Cells.Item(11,2)= $environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 2), 2)
+                $buildData.Cells.Item(11,2)= $environmentsMaster[$x][$y][0][6].Value.Substring(($environmentsMaster[$x][$y][0][6].Value.Length - 2), 2)
                 $buildData.Cells.Item(44,2)= $database_dbSize.database_size
                 $buildData.Cells.Item(43,2)= $database_memory_max.value
                 $buildData.Cells.Item(42,2)= $database_memory_min.value
 
-                $buildData.Cells.Item(54,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                $buildData.Cells.Item(54,2)= "$($environmentsMaster[$x][$y][0][6].Value)"
                 $buildData.Cells.Item(54,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
                 $buildData.Cells.Item(54,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                 $buildData.Cells.Item(54,5)= $hdStringArray
@@ -874,12 +874,12 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
             ##########################
             # PRODUCTION PVE SERVER 
             ##########################
-            elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "pve") {
+            elseif ($environmentsMaster[$x][$y][0][6].Value.Substring(($environmentsMaster[$x][$y][0][6].Value.Length - 5), 3) -eq "pve") {
                 Write-Host "THIS IS THE PRODUCTION PVE SERVER" -ForegroundColor Cyan
 
                 <# CPU/RAM #>
                 Write-Host "Server CPU and RAM" -ForegroundColor Red
-                Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                Write-Host "Server Name: $($environmentsMaster[$x][$y][0][6].Value)"
                 Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
                 Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"  
 
@@ -921,7 +921,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                 <# SCHEDULED TASKS #>
                 Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
+                $tasks = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -ScriptBlock {
                     Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                 } -Credential $credentials
 
@@ -933,7 +933,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                 <# CURRENT VERSION #>
                 Write-Host "Current Environment Version" -ForegroundColor Red
-                $crVersion = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
+                $crVersion = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
                     Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\WebServerPlatform"
                 }
                 Write-Host $crVersion.CrVersion
@@ -945,7 +945,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                 <# OPEN SUITE #>
                 Write-Host "OpenSuite" -ForegroundColor Red
-                $opensuite = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
+                $opensuite = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
                     if ((Test-Path -Path "C:\ProgramData\Actian" -PathType Container) -And (Test-Path -Path "F:\Planview\Interfaces\OpenSuite" -PathType Container)) {
 
                         $software = "*Actian*";
@@ -967,7 +967,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 $PPAdapter = "False"
                 $LKAdapter = "False"
 
-                $PRMini = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
+                $PRMini = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
 
                     if (Test-Path -Path "F:\Planview\midtier\webserver\objects\PRM_Adapter_Config.ini" -PathType leaf){
 
@@ -1034,7 +1034,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                     Write-Host "PRM Adapter not found"
 
-                    $LegacyPPAdapter = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
+                    $LegacyPPAdapter = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
                         Test-Path -Path "F:\Planview\midtier\webserver\objects\ProjectPlace_Config.ini" -PathType leaf
                     }
 
@@ -1045,7 +1045,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                 # NEW RELIC #
                 Write-Host "New Relic" -ForegroundColor Red
-                $newRelic = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
+                $newRelic = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
                     if (Test-Path -Path "C:\ProgramData\New Relic" -PathType Container ) {
                         Write-Host "New Relic has been detected on this server"
                         return "Yes"
@@ -1056,7 +1056,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 }
 
                     # GET WEB CONFIG #
-                    $webConfig = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
+                    $webConfig = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
                         return Get-Content -Path "F:\Planview\MidTier\ODataService\Web.config"
                     }
                     $webConfig = [xml] $webConfig
@@ -1135,7 +1135,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 
                 
 
-                $buildData.Cells.Item(56,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                $buildData.Cells.Item(56,2)= "$($environmentsMaster[$x][$y][0][6].Value)"
                 $buildData.Cells.Item(56,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
                 $buildData.Cells.Item(56,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                 $buildData.Cells.Item(56,5)= $hdStringArray
@@ -1161,17 +1161,17 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
         $webServerCount = 0
         for ($y=1; $y -lt $environmentsMaster[$x].Length; $y++) {        
 
-            if ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "app" -or $environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "ctm") {
+            if ($environmentsMaster[$x][$y][0][6].Value.Substring(($environmentsMaster[$x][$y][0][6].Value.Length - 5), 3) -eq "app" -or $environmentsMaster[$x][$y][0][6].Value.Substring(($environmentsMaster[$x][$y][0][6].Value.Length - 5), 3) -eq "ctm") {
         
                 #######################
                 # SANDBOX APP SERVER 
                 #######################
-                if ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "app") {
+                if ($environmentsMaster[$x][$y][0][6].Value.Substring(($environmentsMaster[$x][$y][0][6].Value.Length - 5), 3) -eq "app") {
                     Write-Host "THIS IS THE SANDBOX APP SERVER" -ForegroundColor Cyan
         
                     <# CPU/RAM #>
                     Write-Host "Server CPU and RAM" -ForegroundColor Red
-                    Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    Write-Host "Server Name: $($environmentsMaster[$x][$y][0][6].Value)"
                     Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
                     Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
         
@@ -1213,7 +1213,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
         
                     <# SCHEDULED TASKS #>
                     Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                    $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
+                    $tasks = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -ScriptBlock {
                         Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                     } -Credential $credentials
 
@@ -1225,7 +1225,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     
                     <# OPEN SUITE #>
                     Write-Host "OpenSuite" -ForegroundColor Red
-                    $opensuite = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
+                    $opensuite = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
                         if ((Test-Path -Path "C:\ProgramData\Actian" -PathType Container) -And (Test-Path -Path "F:\Planview\Interfaces\OpenSuite" -PathType Container)) {
         
                             $software = "*Actian*";
@@ -1247,7 +1247,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     $PPAdapter = "False"
                     $LKAdapter = "False"
 
-                    $PRMini = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
+                    $PRMini = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
 
                         if (Test-Path -Path "F:\Planview\midtier\webserver\objects\PRM_Adapter_Config.ini" -PathType leaf){
 
@@ -1314,7 +1314,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                         Write-Host "PRM Adapter not found"
 
-                        $LegacyPPAdapter = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
+                        $LegacyPPAdapter = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
                             Test-Path -Path "F:\Planview\midtier\webserver\objects\ProjectPlace_Config.ini" -PathType leaf
                         }
 
@@ -1324,7 +1324,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     }
                     
                     <# EXCEL LOGIC AND VARIABLES#>
-                    $buildData.Cells.Item(72,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    $buildData.Cells.Item(72,2)= "$($environmentsMaster[$x][$y][0][6].Value)"
                     $buildData.Cells.Item(72,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
                     $buildData.Cells.Item(72,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(72,5)= $hdStringArray
@@ -1349,12 +1349,12 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 ###############################
                 # SANDBOX CTM SERVER (Troux) 
                 ###############################
-                elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "ctm") {
+                elseif ($environmentsMaster[$x][$y][0][6].Value.Substring(($environmentsMaster[$x][$y][0][6].Value.Length - 5), 3) -eq "ctm") {
                     Write-Host "THIS IS THE SANDBOX TROUX SERVER" -ForegroundColor Cyan
         
                     <# CPU/RAM #>
                     Write-Host "Server CPU and RAM" -ForegroundColor Red
-                    Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    Write-Host "Server Name: $($environmentsMaster[$x][$y][0][6].Value)"
                     Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
                     Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"    
         
@@ -1396,7 +1396,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
         
                     <# SCHEDULED TASKS #>
                     Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                    $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
+                    $tasks = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -ScriptBlock {
                         Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                     } -Credential $credentials
 
@@ -1407,7 +1407,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     }
                     
                     <# EXCEL LOGIC AND VARIABLES#>
-                    $buildData.Cells.Item(73,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    $buildData.Cells.Item(73,2)= "$($environmentsMaster[$x][$y][0][6].Value)"
                     $buildData.Cells.Item(73,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
                     $buildData.Cells.Item(73,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(73,5)= $hdStringArray
@@ -1427,12 +1427,12 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
             #######################
             # SANDBOX WEB SERVER 
             #######################
-            elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "web") {
+            elseif ($environmentsMaster[$x][$y][0][6].Value.Substring(($environmentsMaster[$x][$y][0][6].Value.Length - 5), 3) -eq "web") {
                 Write-Host "THIS IS THE SANDBOX WEB SERVER" -ForegroundColor Cyan
         
                 <# CPU/RAM #>
                 Write-Host "Server CPU and RAM" -ForegroundColor Red
-                Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                Write-Host "Server Name: $($environmentsMaster[$x][$y][0][6].Value)"
                 Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
                 Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
         
@@ -1474,7 +1474,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
         
                 <# SCHEDULED TASKS #>
                 Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
+                $tasks = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -ScriptBlock {
                     Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                 } -Credential $credentials
 
@@ -1486,7 +1486,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
         
                 <# CURRENT VERSION #>
                 Write-Host "Current Environment Version" -ForegroundColor Red
-                $crVersion = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
+                $crVersion = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
                     Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\WebServerPlatform"
                 }
                 Write-Host $crVersion.CrVersion
@@ -1498,7 +1498,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
         
                 # NEW RELIC #
                 Write-Host "New Relic" -ForegroundColor Red
-                $newRelic = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
+                $newRelic = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
                     if (Test-Path -Path "C:\ProgramData\New Relic" -PathType Container ) {
                         Write-Host "New Relic has been detected on this server"
                         return "Yes"
@@ -1509,7 +1509,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 }
         
                     # GET WEB CONFIG #
-                    $webConfig = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
+                    $webConfig = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
                         return Get-Content -Path "F:\Planview\MidTier\ODataService\Web.config"
                     }
                     $webConfig = [xml] $webConfig
@@ -1564,7 +1564,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 
         
                 if ($webServerCount -gt 0){
-                    $buildData.Cells.Item(78 + ($webServerCount - 1),2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    $buildData.Cells.Item(78 + ($webServerCount - 1),2)= "$($environmentsMaster[$x][$y][0][6].Value)"
                     $buildData.Cells.Item(78 + ($webServerCount - 1),3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
                     $buildData.Cells.Item(78 + ($webServerCount - 1),4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(78 + ($webServerCount - 1),5)= $hdStringArray
@@ -1578,7 +1578,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                     $buildData.Cells.Item(78 + ($webServerCount - 1),11)= $instanceID
                 }
                 else {
-                    $buildData.Cells.Item(71,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                    $buildData.Cells.Item(71,2)= "$($environmentsMaster[$x][$y][0][6].Value)"
                     $buildData.Cells.Item(71,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
                     $buildData.Cells.Item(71,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                     $buildData.Cells.Item(71,5)= $hdStringArray
@@ -1602,12 +1602,12 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
             #######################
             # SANDBOX SAS SERVER 
             #######################
-            elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "sas") {
+            elseif ($environmentsMaster[$x][$y][0][6].Value.Substring(($environmentsMaster[$x][$y][0][6].Value.Length - 5), 3) -eq "sas") {
                 Write-Host "THIS IS THE SANDBOX SAS SERVER" -ForegroundColor Cyan
         
                 <# CPU/RAM #>
                 Write-Host "Server CPU and RAM" -ForegroundColor Red
-                Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                Write-Host "Server Name: $($environmentsMaster[$x][$y][0][6].Value)"
                 Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
                 Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
         
@@ -1649,7 +1649,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
         
                 <# SCHEDULED TASKS #>
                 Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
+                $tasks = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -ScriptBlock {
                     Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                 } -Credential $credentials
 
@@ -1660,7 +1660,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 }
                 
                 <# EXCEL LOGIC AND VARIABLES#>
-                $buildData.Cells.Item(75,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                $buildData.Cells.Item(75,2)= "$($environmentsMaster[$x][$y][0][6].Value)"
                 $buildData.Cells.Item(75,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
                 $buildData.Cells.Item(75,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                 $buildData.Cells.Item(75,5)= $hdStringArray
@@ -1679,12 +1679,12 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
             #######################
             # SANDBOX SQL SERVER 
             #######################
-            elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "sql") {
+            elseif ($environmentsMaster[$x][$y][0][6].Value.Substring(($environmentsMaster[$x][$y][0][6].Value.Length - 5), 3) -eq "sql") {
                 Write-Host "THIS IS THE SANDBOX SQL SERVER" -ForegroundColor Cyan
         
                 <# CPU/RAM #>
                 Write-Host "Server CPU and RAM" -ForegroundColor Red
-                Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                Write-Host "Server Name: $($environmentsMaster[$x][$y][0][6].Value)"
                 Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
                 Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
         
@@ -1726,7 +1726,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
         
                 <# SCHEDULED TASKS #>
                 Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
+                $tasks = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -ScriptBlock {
                     Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                 } -Credential $credentials
 
@@ -1743,7 +1743,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 
                 <# DATABASE PROPERTIES #>
                 Write-Host "Database Properties" -ForegroundColor Red
-                $sqlSession = New-PSSession -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials
+                $sqlSession = New-PSSession -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials
                     
                     # ALL DATABASES (NAMES AND SIZES in MB)
                     $mainDatabase = ""
@@ -1757,7 +1757,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         WHERE d.database_id > 4 -- Skip system databases
                         GROUP BY d.name
                         ORDER BY d.name" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase
+                    } -ArgumentList $environmentsMaster[$x][$y][0][6].Value, $mainDatabase
                     foreach ($database in $all_databases) {
                         Write-Host "$($database.name) ---- $($database.Size_MB) MB"
                         if (($database.name -like "*SANDBOX1") -or ($database.name -like "*DEV*")) {
@@ -1774,7 +1774,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         param ($server)
                         Invoke-Sqlcmd -Query "SELECT name, value, [description] FROM sys.configurations WHERE name like
                         '%parallel%' ORDER BY name OPTION (RECOMPILE);" -ServerInstance $server.Name
-                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName
+                    } -ArgumentList $environmentsMaster[$x][$y][0][6].Value
                     $maxdop = $database_maxdop_threshold | Where-Object {$_.name -like "cost*"} | Select-Object -property value
                     $cost_threshold = $database_maxdop_threshold | Where-Object {$_.name -like "max*"} | Select-Object -property value
                     Write-Host "Max DOP --- $($maxdop.value) MB"
@@ -1786,7 +1786,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         param ($server)
                         Invoke-Sqlcmd -Query "SELECT name, value, [description] FROM sys.configurations WHERE name like
                         '%server memory%' ORDER BY name OPTION (RECOMPILE);" -ServerInstance $server.Name
-                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName 
+                    } -ArgumentList $environmentsMaster[$x][$y][0][6].Value 
                     $database_memory_max = $database_memory | where-Object {$_.name -like "max*"} | Select-Object -property value
                     $database_memory_min = $database_memory | where-Object {$_.name -like "min*"} | Select-Object -property value
                     Write-Host "Max Server Memory --- $($database_memory_max.value) MB"
@@ -1804,7 +1804,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         LEFT OUTER JOIN sys.dm_database_encryption_keys dm
                             ON db.database_id = dm.database_id;
                         GO" -ServerInstance $server 
-                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName
+                    } -ArgumentList $environmentsMaster[$x][$y][0][6].Value
                     $dbEncryption = $database_encryption | Where-Object {$_.name -eq $mainDatabase}
                     Write-Host "$($dbEncryption.name) --- $($dbEncryption.is_encrypted)"
 
@@ -1816,7 +1816,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         GO
                         exec sp_spaceused
                         GO" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase
+                    } -ArgumentList $environmentsMaster[$x][$y][0][6].Value, $mainDatabase
                     Write-Host "$($database_dbSize.database_name) --- $($database_dbSize.database_size)"
         
                     # CUSTOM MODELS
@@ -1828,7 +1828,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         WHERE bism_ind ='N' 
                         AND olap_obj_name 
                         NOT like 'PVE%'" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase | Select-Object -property olap_obj_name
+                    } -ArgumentList $environmentsMaster[$x][$y][0][6].Value, $mainDatabase | Select-Object -property olap_obj_name
                     foreach ($model in $database_custom_models.olap_obj_name) {
                         Write-Host $model
                     }  
@@ -1865,7 +1865,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         j.job_id,
                         p.name,
                         p.param_value;" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase
+                    } -ArgumentList $environmentsMaster[$x][$y][0][6].Value, $mainDatabase
                     $database_interfaces.ParamValue  
                     
                     # LICENSE COUNT
@@ -1896,7 +1896,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         LicenseRole,
                         LicenseCode,
                         r.seats" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase
+                    } -ArgumentList $environmentsMaster[$x][$y][0][6].Value, $mainDatabase
                     $licenseProperties = $database_license_count | Select-Object -Property LicenseRole,LicenseCount
                     $totalLicenseCount = 0
                     foreach ($license in $licenseProperties){
@@ -1913,16 +1913,16 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                         FROM ip.pv_version 
                         WHERE release = 'PROGRESSING_WEB'
                         ORDER BY seq DESC;" -ServerInstance $server.Name 
-                    } -ArgumentList $environmentsMaster[$x][$y][1][1].PSComputerName, $mainDatabase
+                    } -ArgumentList $environmentsMaster[$x][$y][0][6].Value, $mainDatabase
                     $database_progressing_web_version.sub_release
         
                 <# EXCEL LOGIC AND VARIABLES#>
-                $buildData.Cells.Item(12,2)= $environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 2), 2)
+                $buildData.Cells.Item(12,2)= $environmentsMaster[$x][$y][0][6].Value.Substring(($environmentsMaster[$x][$y][0][6].Value.Length - 2), 2)
                 $buildData.Cells.Item(44,3)= $database_dbSize.database_size
                 $buildData.Cells.Item(43,3)= $database_memory_max.value
                 $buildData.Cells.Item(42,3)= $database_memory_min.value
         
-                $buildData.Cells.Item(74,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                $buildData.Cells.Item(74,2)= "$($environmentsMaster[$x][$y][0][6].Value)"
                 $buildData.Cells.Item(74,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
                 $buildData.Cells.Item(74,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                 $buildData.Cells.Item(74,5)= $hdStringArray
@@ -1972,12 +1972,12 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
             #######################
             # SANDBOX PVE SERVER 
             #######################
-            elseif ($environmentsMaster[$x][$y][1][1].PSComputerName.Substring(($environmentsMaster[$x][$y][1][1].PSComputerName.Length - 5), 3) -eq "pve") {
+            elseif ($environmentsMaster[$x][$y][0][6].Value.Substring(($environmentsMaster[$x][$y][0][6].Value.Length - 5), 3) -eq "pve") {
                 Write-Host "THIS IS THE SANDBOX PVE SERVER" -ForegroundColor Cyan
         
                 <# CPU/RAM #>
                 Write-Host "Server CPU and RAM" -ForegroundColor Red
-                Write-Host "Server Name: $($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                Write-Host "Server Name: $($environmentsMaster[$x][$y][0][6].Value)"
                 Write-Host "Server CPUs: $(@($environmentsMaster[$x][$y][2][2]).Count)"
                 Write-Host "Server RAM: $([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"  
         
@@ -2019,7 +2019,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
         
                 <# SCHEDULED TASKS #>
                 Write-Host "Scheduled Tasks on Server" -ForegroundColor Red
-                $tasks = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -ScriptBlock {
+                $tasks = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -ScriptBlock {
                     Get-ScheduledTask -TaskPath "\" | Select-Object -Property TaskName, LastRunTime | Where-Object TaskName -notlike "Op*" 
                 } -Credential $credentials
 
@@ -2031,7 +2031,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
         
                 <# CURRENT VERSION #>
                 Write-Host "Current Environment Version" -ForegroundColor Red
-                $crVersion = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
+                $crVersion = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
                     Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Planview\WebServerPlatform"
                 }
                 Write-Host $crVersion.CrVersion
@@ -2043,7 +2043,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 
                 <# OPEN SUITE #>
                 Write-Host "OpenSuite" -ForegroundColor Red
-                $opensuite = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
+                $opensuite = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
                     if ((Test-Path -Path "C:\ProgramData\Actian" -PathType Container) -And (Test-Path -Path "F:\Planview\Interfaces\OpenSuite" -PathType Container)) {
         
                         $software = "*Actian*";
@@ -2065,7 +2065,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 $PPAdapter = "False"
                 $LKAdapter = "False"
 
-                $PRMini = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
+                $PRMini = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
 
                     if (Test-Path -Path "F:\Planview\midtier\webserver\objects\PRM_Adapter_Config.ini" -PathType leaf){
 
@@ -2132,7 +2132,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
 
                     Write-Host "PRM Adapter not found"
 
-                    $LegacyPPAdapter = Invoke-Command -ComputerName $environmentsMaster[$x][$y][1][1].PSComputerName -Credential $credentials -ScriptBlock {
+                    $LegacyPPAdapter = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
                         Test-Path -Path "F:\Planview\midtier\webserver\objects\ProjectPlace_Config.ini" -PathType leaf
                     }
 
@@ -2143,7 +2143,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
         
                 # NEW RELIC #
                 Write-Host "New Relic" -ForegroundColor Red
-                $newRelic = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
+                $newRelic = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
                     if (Test-Path -Path "C:\ProgramData\New Relic" -PathType Container ) {
                         Write-Host "New Relic has been detected on this server"
                         return "Yes"
@@ -2154,7 +2154,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 }
         
                     # GET WEB CONFIG #
-                    $webConfig = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][1][1].PSComputerName)" -Credential $credentials -ScriptBlock {
+                    $webConfig = Invoke-Command -ComputerName "$($environmentsMaster[$x][$y][0][6].Value)$($domain)" -Credential $credentials -ScriptBlock {
                         return Get-Content -Path "F:\Planview\MidTier\ODataService\Web.config"
                     }
                     $webConfig = [xml] $webConfig
@@ -2211,7 +2211,7 @@ for ($x=0; $x -lt $environmentsMaster.Length; $x++) {
                 $buildData.Cells.Item(25,3)= $crVersion.CrVersion
                 $buildData.Cells.Item(19,2)= "True"
         
-                $buildData.Cells.Item(76,2)= "$($environmentsMaster[$x][$y][1][1].PSComputerName)"
+                $buildData.Cells.Item(76,2)= "$($environmentsMaster[$x][$y][0][6].Value)"
                 $buildData.Cells.Item(76,3)= "$(@($environmentsMaster[$x][$y][2][2]).Count)"
                 $buildData.Cells.Item(76,4)= "$([MATH]::Round((($environmentsMaster[$x][$y][2][1].MaxCapacity) / 1000000),2))"
                 $buildData.Cells.Item(76,5)= $hdStringArray
